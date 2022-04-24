@@ -1,5 +1,5 @@
 '''
-Goldy Bot Module for Nova Universe discord server.
+Goldy Bot Module Package for Nova Universe discord server.
 '''
 import GoldyBot
 
@@ -11,5 +11,4 @@ import staff
 
 def load():
     # This function get's executed when the module is loaded, so run your extenstion classes in here.
-    
     staff.NovaStaffUtils(package_module_name=__name__)
