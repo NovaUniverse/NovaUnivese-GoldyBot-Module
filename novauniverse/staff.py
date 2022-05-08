@@ -10,10 +10,12 @@ class NovaStaffUtils(GoldyBot.Extenstion):
         super().__init__(self, package_module_name)
 
     def loader(self):
-        @GoldyBot.command(required_roles=["nova_staff"], toggle_normal_cmd=False, slash_options={
-            "date" : nextcord.SlashOption("date", "When did you take action.", required=True),
-            "user" : nextcord.SlashOption("user", "Who did you take the action on.", required=True),
-            "reason" : nextcord.SlashOption("reason", "Why did you take action.", required=True)
+        @GoldyBot.command(required_roles=["nova_staff"], slash_cmd_only=True, slash_options={
+            "action" : nextcord.SlashOption("action", "What action did you perform?", required=True),
+            "type" : nextcord.SlashOption("type", "What type?", required=True),
+            "date" : nextcord.SlashOption("date", "When did you take action?", required=True, choices={"Today":"none"}),
+            "user" : nextcord.SlashOption("user", "Who did you take the action on?", required=True),
+            "reason" : nextcord.SlashOption("reason", "Why did you take action?", required=True)
         })
         async def staff_log(self:NovaStaffUtils, ctx, action:str, type, date:str, user:nextcord.Member, reason:str):
 
