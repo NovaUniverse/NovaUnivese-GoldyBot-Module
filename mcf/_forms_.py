@@ -3,7 +3,7 @@ import datetime
 import dateparser
 
 database:GoldyBot.Database = GoldyBot.cache.main_cache_dict["database"]
-mcf_database = database.new_instance("mcf_data") # Sketchy way to switch the database for now.
+mcf_database = database.new_instance("mcf_data")
 
 class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
     def __init__(self, teammate:GoldyBot.nextcord.Member=None):
