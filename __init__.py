@@ -6,6 +6,7 @@ import GoldyBot
 AUTHOR = 'Dev Goldy'
 AUTHOR_GITHUB = 'https://github.com/NovaUniverse'
 OPEN_SOURCE_LINK = 'https://github.com/NovaUniverse/NovaUnivese-GoldyBot-Module'
+VERSION = 1.2
 
 import staff, mcf
 
