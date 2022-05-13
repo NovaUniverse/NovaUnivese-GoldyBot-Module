@@ -72,6 +72,7 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
         self.add_item(self.max_players)
 
     async def callback(self, interaction: GoldyBot.nextcord.Interaction) -> None:
+        # Check if this mcf tournament is already in the database.
         if self.tournament_date.value in await mcf_database.list_collection_names():
             await interaction.send(f"**🔥 There's already been an mcf for that date. *Dev Goldy was lazy 😴 while coding this so your going to have to remove this mcf from the mcf_database manually. 😀* ❌**")
             #TODO: Replace these disgusting messages with embeds.

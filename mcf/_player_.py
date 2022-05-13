@@ -1,7 +1,7 @@
 import GoldyBot
 
 class MCFPlayer(GoldyBot.Member):
-    """Represents a member on the Nova Universe discord server that triggers an MCF command."""
+    """Represents a member from the Nova Universe discord server that triggers an MCF command."""
     def __init__(self, ctx):
         self.ctx = ctx
         super().__init__(ctx)
