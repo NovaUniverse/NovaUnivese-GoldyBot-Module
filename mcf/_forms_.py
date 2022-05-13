@@ -44,12 +44,22 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
         self.tournament_date = GoldyBot.nextcord.ui.TextInput(
             label="Tournament Date",
             style=GoldyBot.nextcord.TextInputStyle.short,
-            placeholder="The damn date you idiot!",
+            placeholder="The damn date you idiot! Like --> 13/05/2022",
             default_value=f"{datetime.date.today().strftime('%d/%m/%Y')}",
+            required=True,
+            min_length=6,
+        )
+        self.add_item(self.tournament_date)
+
+        self.tournament_time = GoldyBot.nextcord.ui.TextInput(
+            label="Tournament Time",
+            style=GoldyBot.nextcord.TextInputStyle.short,
+            placeholder="The damn time you idiot! Like --> 18:00",
+            default_value=f"{datetime.date.today().strftime('%H:%M')}",
             required=True,
             min_length=5,
         )
-        self.add_item(self.tournament_date)
+        self.add_item(self.tournament_time)
 
         # Settings
         self.max_players = GoldyBot.nextcord.ui.TextInput(
@@ -68,9 +78,12 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
             return
 
         else:
+            date = dateparser.parse(self.tournament_date.value + " " + self.tournament_time.value, 
+            date_formats=["%d/%m/%Y %H:%M", "%Y/%m/%d %H:%M"])
+
             await mcf_database.create_collection(self.tournament_date.value, {"_id": 0, 
-            "date": dateparser.parse(self.tournament_date.value, date_formats=["%d/%m/%Y", "%Y/%m/%d"]).timestamp(),
+            "date": date.timestamp(),
             "max_players": int(self.max_players.value)
             })
 
-            await interaction.send(f'**🔥 MCF Form is now open. ``/join_mcf`` ✅**')
+            await interaction.send(f'**🔥 MCF Form is now open until <t:{date.timestamp()}:f> ``/join_mcf`` ✅**')
