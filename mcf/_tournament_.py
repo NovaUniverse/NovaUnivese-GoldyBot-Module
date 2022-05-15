@@ -99,7 +99,7 @@ class MCFTournament(BasicMCFTournament):
                 if team[0]["teammate_discord_id"] == None:
                     return f"{count}"
 
-            #TODO: Finish this!
+            #TODO: #1 Finish free team propery.
         
 
     async def add_player(self, minecraft_ign:str, player_discord_id:int, player_teammate_discord_id:int | None):
