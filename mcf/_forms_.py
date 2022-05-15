@@ -2,6 +2,8 @@ import GoldyBot
 import datetime
 import dateparser
 
+from . import _tournament_, _player_
+
 database:GoldyBot.Database = GoldyBot.cache.main_cache_dict["database"]
 mcf_database = database.new_instance("mcf_data")
 
@@ -32,6 +34,8 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
         self.add_item(self.mc_username)
 
     async def callback(self, interaction: GoldyBot.nextcord.Interaction) -> None:
+        mcf_player = _player_.MCFPlayer(interaction, mcf_database)
+
         if not self.teammate == None:
             await interaction.send(f'**✉️ Team Up Inventation Sent to ``fdjfhudhfydu REEEEH!!!``! ✅**')
 
@@ -72,19 +76,14 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
         self.add_item(self.max_players)
 
     async def callback(self, interaction: GoldyBot.nextcord.Interaction) -> None:
-        # Check if this mcf tournament is already in the database.
-        if self.tournament_date.value in await mcf_database.list_collection_names():
-            await interaction.send(f"**🔥 There's already been an mcf for that date. *Dev Goldy was lazy 😴 while coding this so your going to have to remove this mcf from the mcf_database manually. 😀* ❌**")
-            #TODO: Replace these disgusting messages with embeds.
-            return
+        
+        # Create the tournament.
+        #==========================
+        mcf = _tournament_.MCFTournament(mcf_database, self.tournament_date, self.tournament_time, self.max_players.value)
 
+        if mcf.was_created:
+            await interaction.send(f'**🔥 MCF Form is now open until <t:{mcf.date.timestamp()}:f> ``/join_mcf`` ✅**')
+        
         else:
-            date = dateparser.parse(self.tournament_date.value + " " + self.tournament_time.value, 
-            date_formats=["%d/%m/%Y %H:%M", "%Y/%m/%d %H:%M"])
-
-            await mcf_database.create_collection(self.tournament_date.value, {"_id": 0, 
-            "date": date.timestamp(),
-            "max_players": int(self.max_players.value)
-            })
-
-            await interaction.send(f'**🔥 MCF Form is now open until <t:{date.timestamp()}:f> ``/join_mcf`` ✅**')
+            await interaction.send(
+                f"**🔥 There's already an mcf for that date. ``/mcf_cancel {{{mcf.date}}}`` ❌**")

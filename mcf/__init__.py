@@ -1,7 +1,7 @@
 import nextcord
 import GoldyBot
 
-from . import _forms_, _info_
+from . import _forms_, _info_, _tournament_
 
 class MCF(GoldyBot.Extenstion):
     def __init__(self, package_module=None):
