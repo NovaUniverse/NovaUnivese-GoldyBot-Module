@@ -8,6 +8,7 @@ AUTHOR_GITHUB = 'https://github.com/NovaUniverse'
 OPEN_SOURCE_LINK = 'https://github.com/NovaUniverse/novacord'
 VERSION = 1.2
 
+import errors
 import staff, mcf
 
 def load():

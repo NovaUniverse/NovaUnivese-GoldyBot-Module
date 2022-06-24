@@ -5,6 +5,9 @@ import asyncio
 import dateparser
 
 import GoldyBot
+from mcf._player_ import MCFPlayer
+
+import errors
 
 MODULE_NAME = "TOURNAMENT"
 
@@ -14,8 +17,11 @@ class BasicMCFTournament():
     """Represents an mcf tournament that is already created and also the base class."""
 
     def __init__(self, tournament_data:List[dict]):
-        self.info = tournament_data[0]
-        self.players = tournament_data[1:]
+        try:
+            self.info = tournament_data[0]
+            self.players = tournament_data[1:]
+        except IndexError:
+            raise errors.TournamentDoesntExistError("Tournament doesn't exist. You'll need to create it first.")
 
     @property
     def date(self):
@@ -27,22 +33,29 @@ class BasicMCFTournament():
         """Returns the max amount of players allowed in this tournament."""
         return self.info["max_players"]
 
+    def convert_to_full_class(self):
+        # Where I left off
+        pass
+
 class MCFTournament(BasicMCFTournament):
     """Represents a mcf tournament that can be crated in the database and many more things."""
-    def __init__(self, mcf_database:GoldyBot.Database, mcf_date:str, mcf_time:str, max_players:str):
+    def __init__(self, mcf_database:GoldyBot.Database, mcf_date:str, mcf_time:str, max_players:str, dont_create:bool=False):
         self.mcf_database = mcf_database
 
         self.mcf_date = mcf_date
         self.mcf_time = mcf_time
         self.max_players_ = max_players
+        
+        self.dont_create_ = dont_create
 
         self.mcf_was_created = False
 
     async def init(self):
-        # Asyncronous way to run this shit.
+        """Asyncronous way to run this shit."""
         if not await self.tournament_exist:
-            # Creates tournament in database if it's not there already.
-            await self.create()
+            if self.dont_create_ == False:
+                # Creates tournament in database if it's not there already.
+                await self.create()
 
         self.tournament_data = await self.get_all_collections()
         super().__init__(self.tournament_data)
@@ -61,6 +74,14 @@ class MCFTournament(BasicMCFTournament):
 
         GoldyBot.log("info_4", f"[{MODULE_NAME}] MCF Tournament created for '{date.date()}'.")
 
+    async def delete(self):
+        """Deletes the tournament in the database"""
+        await self.mcf_database.delete_collection(self.mcf_date)
+
+        GoldyBot.log("info_4", f"[{MODULE_NAME}] The MCF Tournament for '{self.mcf_date}' was deleted!")
+
+        return True
+
     @property
     def was_created(self):
         return self.mcf_was_created
@@ -68,14 +89,13 @@ class MCFTournament(BasicMCFTournament):
     @property
     async def tournament_exist(self):
         """Checks if the tournament exist in the database."""
-        print("dfdfd")
         if self.mcf_date in await self.mcf_database.list_collection_names():
             return True
         else:
             return False
 
     @property
-    async def free_team(self) -> str:
+    async def free_team(self, teammate=None) -> str:
         """Finds a free team with no players that a player can be assigned to. If all teams have a player, a team with a player that has no teammate picked will be returned instead."""
         teams_list = []
         for team in range(1, self.max_players):
@@ -87,27 +107,42 @@ class MCFTournament(BasicMCFTournament):
                 return f"{team}"
 
         # Find a team with a player that hasn't yet chosen a teammate.
-        half_empty_teams_list = []
-        team:list
-        count = 0
-        for team in teams_list:
-            count += 1
+        if teammate == None:
+            half_empty_teams_list = []
+            team:list
+            count = 0
 
-            if len(team) == 1:
-                half_empty_teams_list.append(team)
+            for team in teams_list:
+                count += 1
 
-                if team[0]["teammate_discord_id"] == None:
-                    return f"{count}"
+                if len(team) == 1:
+                    half_empty_teams_list.append(team)
 
-            #TODO: #1 Finish free team propery.
+                    if team[0]["teammate_discord_id"] == None:
+                        return f"{count}"
+
+            # No free teams.
+            return None
+
+        else:
+            # Not enough space. There's no free team
+            return None
         
-
-    async def add_player(self, minecraft_ign:str, player_discord_id:int, player_teammate_discord_id:int | None):
+    async def add_player(self, player:MCFPlayer):
         """Adds player to tournament."""
-        await self.mcf_database.insert(self.mcf_date, {"_id"})
+        await self.mcf_database.insert(self.mcf_date, 
+            {
+                "_id": player.member_id,
+                "mc_ign": player.mc_ign
+            })
 
-        pass
+    async def remove_player(self, player:MCFPlayer):
+        """Removes player from tournament."""
+        await self.mcf_database.remove(self.mcf_date, 
+            {
+                "_id": player.member_id,
+                "mc_ign": player.mc_ign
+            })
 
     async def get_all_collections(self):
-        print("OwO!")
         return await self.mcf_database.find_all(self.mcf_date)
