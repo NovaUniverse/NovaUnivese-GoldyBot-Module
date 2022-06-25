@@ -2,16 +2,16 @@ import GoldyBot
 import datetime
 import dateparser
 
+from . import _tournament_, _player_
+
 database:GoldyBot.Database = GoldyBot.cache.main_cache_dict["database"]
 mcf_database = database.new_instance("mcf_data")
 
 class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
-    def __init__(self, teammate:GoldyBot.nextcord.Member=None):
+    def __init__(self):
         super().__init__(
             "Join 🔥 MCF Tournament",
         )
-
-        self.teammate = teammate
 
         self.time_agree = GoldyBot.nextcord.ui.TextInput(
             label="Will you be on time? (Saturday 18:00 GMT+1)",
@@ -32,8 +32,25 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
         self.add_item(self.mc_username)
 
     async def callback(self, interaction: GoldyBot.nextcord.Interaction) -> None:
-        if not self.teammate == None:
-            await interaction.send(f'**✉️ Team Up Inventation Sent to ``fdjfhudhfydu REEEEH!!!``! ✅**')
+        mcf_player = _player_.MCFPlayer(interaction, 
+            self.mc_username.value)
+
+        tournament = _tournament_.MCFTournament()
+        await tournament.add_player(mcf_player)
+
+        embed = GoldyBot.utility.goldy.embed.Embed(
+            title="✅ Join Request Sent!",
+            colour=GoldyBot.utility.goldy.colours.GREEN,
+            description=f"""
+            **Your form has been sent. You've been added to the tournament player list. Closer to tournament date, you'll be pinged in <#7188671160430632> when your in!**
+
+            **[How to Team with Friends?]()**
+            """)
+
+        # Move this message to a discord server help channel.
+        """💌 To team with a friend they must also do ``/join_mcf`` and then your able to send eachother team requests via ``/mcf_team``. 😊"""
+
+        await interaction.send(embed=embed)
 
 class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
     def __init__(self):
@@ -44,12 +61,22 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
         self.tournament_date = GoldyBot.nextcord.ui.TextInput(
             label="Tournament Date",
             style=GoldyBot.nextcord.TextInputStyle.short,
-            placeholder="The damn date you idiot!",
+            placeholder="The damn date you idiot! Like --> 13/05/2022",
             default_value=f"{datetime.date.today().strftime('%d/%m/%Y')}",
+            required=True,
+            min_length=6,
+        )
+        self.add_item(self.tournament_date)
+
+        self.tournament_time = GoldyBot.nextcord.ui.TextInput(
+            label="Tournament Time",
+            style=GoldyBot.nextcord.TextInputStyle.short,
+            placeholder="The damn time you idiot! Like --> 18:00",
+            default_value=f"{datetime.date.today().strftime('%H:%M')}",
             required=True,
             min_length=5,
         )
-        self.add_item(self.tournament_date)
+        self.add_item(self.tournament_time)
 
         # Settings
         self.max_players = GoldyBot.nextcord.ui.TextInput(
@@ -62,15 +89,31 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
         self.add_item(self.max_players)
 
     async def callback(self, interaction: GoldyBot.nextcord.Interaction) -> None:
-        if self.tournament_date.value in await mcf_database.list_collection_names():
-            await interaction.send(f"**🔥 There's already been an mcf for that date. *Dev Goldy was lazy 😴 while coding this so your going to have to remove this mcf from the mcf_database manually. 😀* ❌**")
-            #TODO: Replace these disgusting messages with embeds.
-            return
+        
+        # Create the tournament.
+        #==========================
+        mcf = _tournament_.MCFTournament(mcf_database, self.tournament_date.value, self.tournament_time.value, self.max_players.value)
 
+        await mcf.init()
+
+        if mcf.was_created:
+            embed = GoldyBot.utility.goldy.embed.Embed(
+                title="✔ MCF Form now open!",
+                description=f"""
+                **🔥 MCF Form is now open until ``{mcf.date.time().strftime("%H:%M%p")} ({datetime.datetime.now().astimezone().tzinfo})`` on ``{mcf.date.date().strftime("%d/%m/%Y")}`` ✅**
+
+                ``/join_mcf``
+                """)
+
+            await interaction.send(embed=embed)
+        
         else:
-            await mcf_database.create_collection(self.tournament_date.value, {"_id": 0, 
-            "date": dateparser.parse(self.tournament_date.value, date_formats=["%d/%m/%Y", "%Y/%m/%d"]).timestamp(),
-            "max_players": int(self.max_players.value)
-            })
+            embed = GoldyBot.utility.goldy.embed.Embed(
+                title="❌ MCF already exists!",
+                description=f"""
+                **🔥 There's already an mcf for that date.** ❌
 
-            await interaction.send(f'**🔥 MCF Form is now open. ``/join_mcf`` ✅**')
+                ``/mcf_cancel {{{mcf.date.date().strftime("%d/%m/%Y")}}} {{{mcf.date.time().strftime("%H:%M")}}}``
+                """)
+
+            await interaction.send(embed=embed)

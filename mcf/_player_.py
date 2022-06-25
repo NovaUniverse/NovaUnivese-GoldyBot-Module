@@ -1,16 +1,17 @@
+from __future__ import annotations
 import GoldyBot
+from . import _tournament_
 
 class MCFPlayer(GoldyBot.Member):
-    """Represents a member on the Nova Universe discord server that triggers an MCF command."""
-    def __init__(self, ctx):
+    """Represents a member from the Nova Universe discord server that triggers an MCF command."""
+    def __init__(self, ctx, mc_ign:str):
         self.ctx = ctx
+
+        self.mc_ign_ = mc_ign
+
         super().__init__(ctx)
 
     @property
-    def is_signed_up(self):
-        """Checks if the player is signed up for mcf already."""
-        pass
-
-    def signup(self, minecraft_ign:str, teammate:GoldyBot.Member):
-        """Signs player up for MCF."""
-        pass
+    def mc_ign(self):
+        """Returns minecraft ign of player."""
+        return self.mc_ign_
