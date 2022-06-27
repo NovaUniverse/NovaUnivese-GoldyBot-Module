@@ -2,16 +2,18 @@ import GoldyBot
 import datetime
 import dateparser
 
-from . import _tournament_, _player_
+from . import _tournament_, _player_, _info_
 
 database:GoldyBot.Database = GoldyBot.cache.main_cache_dict["database"]
 mcf_database = database.new_instance("mcf_data")
 
 class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
-    def __init__(self):
+    def __init__(self, tournament:_tournament_.MCFTournament):
         super().__init__(
             "Join 🔥 MCF Tournament",
         )
+
+        self.tournament = tournament
 
         self.time_agree = GoldyBot.nextcord.ui.TextInput(
             label="Will you be on time? (Saturday 18:00 GMT+1)",
@@ -35,8 +37,7 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
         mcf_player = _player_.MCFPlayer(interaction, 
             self.mc_username.value)
 
-        tournament = _tournament_.MCFTournament()
-        await tournament.add_player(mcf_player)
+        await self.tournament.add_player(mcf_player)
 
         embed = GoldyBot.utility.goldy.embed.Embed(
             title="✅ Join Request Sent!",

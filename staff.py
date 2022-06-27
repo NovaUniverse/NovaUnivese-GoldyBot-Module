@@ -33,6 +33,15 @@ class NovaStaffUtils(GoldyBot.Extenstion):
 
             await ctx.send(embed=embed)
 
+
+        @GoldyBot.command(help_des="A quick command to remove all mcf team roles from every member on the server.", 
+            required_roles=["nova_staff"], slash_cmd_only=True)
+        async def clear_mcf_team_roles(self:NovaStaffUtils, ctx):
+            
+            # FINSIH THIS!
+
+            await ctx.send("done")
+
 class Embed:
     title = "📰 Activity Report"
     des = """

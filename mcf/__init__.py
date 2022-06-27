@@ -21,9 +21,14 @@ class MCF(GoldyBot.Extenstion):
         })
         async def join_mcf(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx, teammate=None):
             # Check if a joinable mcf tournament exists.
-            
-            # Send member form.
-            await ctx.send_modal(_forms_.JoinMCFForm())
+            tournament = await _info_.TournamentInfo().get_latest_mcf()
+
+            if not tournament == None:
+                # Send member form.
+                await ctx.send_modal(_forms_.JoinMCFForm())
+            else:
+                # No mcf available.
+                await ctx.send("")
 
         @GoldyBot.command(help_des="Admin command to open the mcf minecraft tournament forum.", slash_cmd_only=True, required_roles=["nova_staff"])
         async def mcf_open_form(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
