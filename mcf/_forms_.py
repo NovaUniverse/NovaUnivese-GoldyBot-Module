@@ -1,6 +1,9 @@
+from typing import Dict, List
 import GoldyBot
 import datetime
 import dateparser
+
+from GoldyBot.utility.datetime import user_output
 
 from . import _tournament_, _player_, _info_
 
@@ -43,13 +46,13 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
             title="✅ Join Request Sent!",
             colour=GoldyBot.utility.goldy.colours.GREEN,
             description=f"""
-            **Your form has been sent. You've been added to the tournament player list. Closer to tournament date, you'll be pinged in <#7188671160430632> when your in!**
+            **Your form has been sent. You've been added to the tournament player list. As the tournament date approaches, you'll be pinged in <#7188671160430632> when your in!**
 
             **[How to Team with Friends?]()**
             """)
 
         # Move this message to a discord server help channel.
-        """💌 To team with a friend they must also do ``/join_mcf`` and then your able to send eachother team requests via ``/mcf_team``. 😊"""
+        """💌 To team with a friend they must also do ``/join_mcf`` and then your able to send each other team requests via ``/mcf_team``. 😊"""
 
         await interaction.send(embed=embed)
 
@@ -99,12 +102,13 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
 
         if mcf.was_created:
             embed = GoldyBot.utility.goldy.embed.Embed(
-                title="✔ MCF Form now open!",
+                title="🔥 MCF Form now open!",
                 description=f"""
-                **🔥 MCF Form is now open until ``{mcf.date.time().strftime("%H:%M%p")} ({datetime.datetime.now().astimezone().tzinfo})`` on ``{mcf.date.date().strftime("%d/%m/%Y")}`` ✅**
+                **✅ MCF Form is now open until ``{user_output.make_time_human(mcf.date)} ({datetime.datetime.now().astimezone().tzinfo})`` on ``{user_output.make_date_human(mcf.date)}`` ✅**
 
                 ``/join_mcf``
-                """)
+                """,
+                colour=GoldyBot.utility.goldy.colours.AKI_ORANGE)
 
             await interaction.send(embed=embed)
         
@@ -114,7 +118,78 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
                 description=f"""
                 **🔥 There's already an mcf for that date.** ❌
 
-                ``/mcf_cancel {{{mcf.date.date().strftime("%d/%m/%Y")}}} {{{mcf.date.time().strftime("%H:%M")}}}``
+                **``/mcf_cancel`` to cancel it.**
                 """)
 
             await interaction.send(embed=embed)
+
+class MCFCancelDropdown(GoldyBot.nextcord.ui.Select):
+    def __init__(self, author:GoldyBot.Member, mcf_tournaments:List[_tournament_.MCFTournament]):
+        self.author = author
+
+        count = 0
+
+        options = []
+        self.options_values = {}
+
+        for tournament in mcf_tournaments:
+            count += 1
+            options.append(GoldyBot.nextcord.SelectOption(
+                label=f"• MCF - {user_output.make_date_human(tournament.date)}", 
+                description=f"Time: {user_output.make_time_human(tournament.date)}", 
+                emoji="🏆",
+                value=count))
+
+            self.options_values[f"{count}"] = tournament
+
+        super().__init__(
+            placeholder="🎯 Choose the tournament to cancel.",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: GoldyBot.nextcord.Interaction):
+        view = MCFCancelConfirm(self.author)
+        await interaction.send("**Are you sure you would like to cancel this Tournament?**", view=view)
+        await view.wait()
+
+        if view.value == True:
+            mcf:_tournament_.MCFTournament = self.options_values[self.values[0]]
+
+            if await mcf.delete():
+                embed = GoldyBot.utility.goldy.embed.Embed(
+                    title="⛔ MCF Cancelled!",
+                    description=f"""
+                    **❌ The MCF for ``{user_output.make_date_human(mcf.date)}`` has been cancelled!** 
+                    """,
+                    colour=GoldyBot.utility.goldy.colours.AKI_RED)
+
+                await interaction.send(embed=embed)
+
+class MCFCancelDropdownView(GoldyBot.nextcord.ui.View):
+    def __init__(self, author:GoldyBot.Member, mcf_tournaments:List[_tournament_.MCFTournament]):
+        super().__init__()
+
+        self.add_item(MCFCancelDropdown(author, mcf_tournaments))
+
+class MCFCancelConfirm(GoldyBot.nextcord.ui.View):
+    def __init__(self, author:GoldyBot.Member):
+        super().__init__()
+        self.value = None
+
+        self.author = author
+
+    @GoldyBot.nextcord.ui.button(label="Yes", style=GoldyBot.nextcord.ButtonStyle.green)
+    async def yes(self, button: GoldyBot.nextcord.ui.Button, interaction: GoldyBot.nextcord.Interaction):
+        if self.author.member == interaction.user:
+            await interaction.response.send_message("**Okay! 💛**", ephemeral=True)
+            self.value = True
+            self.stop()
+
+    @GoldyBot.nextcord.ui.button(label="NO!", style=GoldyBot.nextcord.ButtonStyle.red)
+    async def no(self, button: GoldyBot.nextcord.ui.Button, interaction: GoldyBot.nextcord.Interaction):
+        if self.author.member == interaction.user:
+            await interaction.response.send_message("**Alright, cancelled! 💚**", ephemeral=True)
+            self.value = False
+            self.stop()

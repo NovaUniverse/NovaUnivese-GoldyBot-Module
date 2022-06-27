@@ -36,3 +36,10 @@ class TournamentInfo():
             return None # There are no mcfs available to join.
 
         
+    async def find_mcf(self, date:datetime.datetime):
+        """Finds an mcf tournamment hosted on that date."""
+        for mcf in await self.get_all_mcfs():
+            if mcf.date == date:
+                return mcf
+
+        return None

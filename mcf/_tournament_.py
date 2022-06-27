@@ -5,6 +5,7 @@ import asyncio
 import dateparser
 
 import GoldyBot
+from GoldyBot.utility.datetime import user_output
 from mcf._player_ import MCFPlayer
 
 import errors
@@ -36,26 +37,25 @@ class Tournament():
 
         if self.tournament_data == []:
             self.tournament_data = await self.get_all_docs()
-            super().__init__(self.tournament_data)
 
     async def create(self):
         """Creates the tournament in a database"""
         date = self.date
 
-        await self.tournament_database.create_collection(date.date(), {"_id": 0, 
+        await self.tournament_database.create_collection(user_output.make_date_human(date), {"_id": 0, 
             "date": date.timestamp(),
             "max_players": int(self.max_players)
         })
 
-        self.mcf_was_created = True
+        self.was_created_ = True
 
         GoldyBot.log("info_4", f"[{MODULE_NAME}] MCF Tournament created for '{date.date()}'.")
 
     async def delete(self):
         """Deletes the tournament in the database"""
-        await self.tournament_database.delete_collection(self.date.date())
+        await self.tournament_database.delete_collection(user_output.make_date_human(self.date)) # Change to human readable format using goldy's utils
 
-        GoldyBot.log("info_4", f"[{MODULE_NAME}] The MCF Tournament for '{self.date.date()}' was deleted!")
+        GoldyBot.log("info_4", f"[{MODULE_NAME}] The MCF Tournament for '{user_output.make_date_human(self.date)}' was deleted!")
 
         return True
 
@@ -70,13 +70,14 @@ class Tournament():
             return datetime.datetime.fromtimestamp(self.tournament_data[0]["date"])
         except: 
             raise GoldyBot.errors.GoldyBotError("Tournament class must include either params ``date`` and ``time`` or ``tournament_data``!")
+            return None
 
     @property
     def max_players(self) -> int:
         """Returns the max amount of players allowed in this tournament."""
         try:
             return self.tournament_data[0]["max_players"]
-        except KeyError:
+        except IndexError:
             return self.max_players_
 
     @property
@@ -88,7 +89,7 @@ class Tournament():
     async def tournament_exist(self):
         """Checks if the tournament exist in the database."""
         if self.tournament_data == []:
-            if self.date.date() in await self.tournament_database.list_collection_names():
+            if user_output.make_date_human(self.date) in await self.tournament_database.list_collection_names():
                 return True
             else:
                 return False
@@ -96,7 +97,7 @@ class Tournament():
             return True
 
     async def get_all_docs(self):
-        return await self.tournament_database.find_all(self.date.date())
+        return await self.tournament_database.find_all(user_output.make_date_human(self.date))
 
 class MCFTournament(Tournament):
     def __init__(self, mcf_database: GoldyBot.Database, mcf_date: str=None, mcf_time: str=None, max_players: str=24, tournament_data=[], dont_create: bool = False):
@@ -107,7 +108,7 @@ class MCFTournament(Tournament):
         """Finds a free team with no players that a player can be assigned to. If all teams have a player, a team with a player that has no teammate picked will be returned instead."""
         teams_list = []
         for team in range(1, self.max_players):
-            team_data = await self.tournament_database.find(self.date.date(), query={"team": f"{team}"}, key="team")
+            team_data = await self.tournament_database.find(user_output.make_date_human(self.date), query={"team": f"{team}"}, key="team")
             teams_list.append(team_data)
 
             if team_data == []:
@@ -138,7 +139,7 @@ class MCFTournament(Tournament):
         
     async def add_player(self, player:MCFPlayer):
         """Adds player to the mcf tournament."""
-        await self.tournament_database.insert(self.date.date(), 
+        await self.tournament_database.insert(user_output.make_date_human(self.date), 
             {
                 "_id": player.member_id,
                 "mc_ign": player.mc_ign
@@ -146,7 +147,7 @@ class MCFTournament(Tournament):
 
     async def remove_player(self, player:MCFPlayer):
         """Removes player from the mcf tournament."""
-        await self.tournament_database.remove(self.date.date(), 
+        await self.tournament_database.remove(user_output.make_date_human(self.date), 
             {
                 "_id": player.member_id,
                 "mc_ign": player.mc_ign
