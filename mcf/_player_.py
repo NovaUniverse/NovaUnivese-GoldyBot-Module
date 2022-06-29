@@ -15,3 +15,8 @@ class MCFPlayer(GoldyBot.Member):
     def mc_ign(self):
         """Returns minecraft ign of player."""
         return self.mc_ign_
+
+    @property
+    def discord_id(self):
+        """Returns the discord id of the player."""
+        return self.member_id

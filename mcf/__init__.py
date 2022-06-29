@@ -5,6 +5,7 @@ import GoldyBot
 from . import _forms_, _info_, _tournament_, _player_
 
 from GoldyBot.utility.datetime.user_input import *
+from GoldyBot.utility.commands import *
 
 from errors import TournamentDoesntExistError
 
@@ -26,7 +27,7 @@ class MCF(GoldyBot.Extenstion):
                 await ctx.send_modal(_forms_.JoinMCFForm(tournament))
             else:
                 # No mcf available.
-                message = await ctx.send(embed=GoldyBot.utility.goldy.embed.Embed(
+                message = await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(
                     title="⛔ SignUps not open yet!",
                     description=f"""
                     ❌ *Sorry we haven't open signups for the next mcf yet.*
