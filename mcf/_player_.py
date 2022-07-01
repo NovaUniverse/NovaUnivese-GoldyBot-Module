@@ -4,7 +4,7 @@ from . import _tournament_
 
 class MCFPlayer(GoldyBot.Member):
     """Represents a member from the Nova Universe discord server that triggers an MCF command."""
-    def __init__(self, ctx, mc_ign:str):
+    def __init__(self, ctx, mc_ign:str=None):
         self.ctx = ctx
 
         self.mc_ign_ = mc_ign

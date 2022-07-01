@@ -76,7 +76,7 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
             label="Tournament Time",
             style=GoldyBot.nextcord.TextInputStyle.short,
             placeholder="The damn time you idiot! Like --> 18:00",
-            default_value=f"{datetime.date.today().strftime('%H:%M')}",
+            default_value=f"{datetime.datetime.now().strftime('%H:%M')}",
             required=True,
             min_length=5,
         )

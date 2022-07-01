@@ -145,6 +145,8 @@ class MCFTournament(Tournament):
                 "mc_ign": player.mc_ign
             })
 
+        return True
+
     async def remove_player(self, player:MCFPlayer):
         """Removes player from the mcf tournament."""
         await self.tournament_database.remove(user_output.make_date_human(self.date), 
@@ -152,3 +154,27 @@ class MCFTournament(Tournament):
                 "_id": player.member_id,
                 "mc_ign": player.mc_ign
             })
+
+        return True
+
+    async def is_member_registered(self, member:GoldyBot.Member):
+        """Checks if the member is registered in this mcf tournament."""
+        data = await self.tournament_database.find_one(user_output.make_date_human(self.date), 
+            {
+                "_id": member.member_id,
+            })
+
+        if data == None:
+            return False
+
+        else:
+            return True
+
+    async def get_player(self, member:GoldyBot.Member):
+        """Finds and returns the mcf player."""
+        player_data = await self.tournament_database.find_one(user_output.make_date_human(self.date), 
+            {
+                "_id": member.member_id,
+            })
+
+        return MCFPlayer(member.ctx, mc_ign=player_data["mc_ign"])
