@@ -56,10 +56,10 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
 
         await interaction.send(embed=embed)
 
-class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
+class CreateMCFForm(GoldyBot.nextcord.ui.Modal):
     def __init__(self):
         super().__init__(
-            "🔓 Open 🔥 MCF Tournament",
+            "🎁 Create 🔥 MCF Tournament",
         )
 
         self.tournament_date = GoldyBot.nextcord.ui.TextInput(
@@ -102,11 +102,11 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
 
         if mcf.was_created:
             embed = GoldyBot.utility.goldy.embed.Embed(
-                title="🔥 MCF Form now open!",
+                title="🔥 MCF has been created!",
                 description=f"""
-                **✅ MCF Form is now open until ``{user_output.make_time_human(mcf.date)} ({datetime.datetime.now().astimezone().tzinfo})`` on ``{user_output.make_date_human(mcf.date)}`` ✅**
+                **✅ MCF has been created for ``{user_output.make_time_human(mcf.date)} ({datetime.datetime.now().astimezone().tzinfo})`` on ``{user_output.make_date_human(mcf.date)}`` ✅**
 
-                ``/join_mcf``
+                ``/mcf open_form`` - To open the form now.
                 """,
                 colour=GoldyBot.utility.goldy.colours.AKI_ORANGE)
 
@@ -118,7 +118,7 @@ class OpenMCFForm(GoldyBot.nextcord.ui.Modal):
                 description=f"""
                 **🔥 There's already an mcf for that date.** ❌
 
-                **``/mcf_cancel`` to cancel it.**
+                **``/mcf cancel`` to cancel it.**
                 """)
 
             await interaction.send(embed=embed)
@@ -136,7 +136,7 @@ class MCFCancelDropdown(GoldyBot.nextcord.ui.Select):
             count += 1
             options.append(GoldyBot.nextcord.SelectOption(
                 label=f"• MCF - {user_output.make_date_human(tournament.date)}", 
-                description=f"Time: {user_output.make_time_human(tournament.date)}", 
+                description=f"⏰ {user_output.make_time_human(tournament.date)}", 
                 emoji="🏆",
                 value=count))
 
@@ -150,7 +150,7 @@ class MCFCancelDropdown(GoldyBot.nextcord.ui.Select):
         )
 
     async def callback(self, interaction: GoldyBot.nextcord.Interaction):
-        view = MCFCancelConfirm(self.author)
+        view = await GoldyBot.utility.views.confirm.yes_or_no(interaction)
         await interaction.send("**Are you sure you would like to cancel this Tournament?**", view=view)
         await view.wait()
 
@@ -173,23 +173,66 @@ class MCFCancelDropdownView(GoldyBot.nextcord.ui.View):
 
         self.add_item(MCFCancelDropdown(author, mcf_tournaments))
 
-class MCFCancelConfirm(GoldyBot.nextcord.ui.View):
-    def __init__(self, author:GoldyBot.Member):
-        super().__init__()
-        self.value = None
 
+class MCFCloseFormDropdown(GoldyBot.nextcord.ui.Select):
+    def __init__(self, author:GoldyBot.Member, mcf_tournaments:List[_tournament_.MCFTournament]):
         self.author = author
 
-    @GoldyBot.nextcord.ui.button(label="Yes", style=GoldyBot.nextcord.ButtonStyle.green)
-    async def yes(self, button: GoldyBot.nextcord.ui.Button, interaction: GoldyBot.nextcord.Interaction):
-        if self.author.member == interaction.user:
-            await interaction.response.send_message("**Okay! 💛**", ephemeral=True)
-            self.value = True
-            self.stop()
+        count = 0
 
-    @GoldyBot.nextcord.ui.button(label="NO!", style=GoldyBot.nextcord.ButtonStyle.red)
-    async def no(self, button: GoldyBot.nextcord.ui.Button, interaction: GoldyBot.nextcord.Interaction):
-        if self.author.member == interaction.user:
-            await interaction.response.send_message("**Alright, cancelled! 💚**", ephemeral=True)
-            self.value = False
-            self.stop()
+        options = []
+        self.options_values = {}
+        self.no_mcfs = False
+
+        for tournament in mcf_tournaments:
+            if tournament.is_open:
+                count += 1
+                options.append(GoldyBot.nextcord.SelectOption(
+                    label=f"• MCF - {user_output.make_date_human(tournament.date)}", 
+                    description=f"Time: {user_output.make_time_human(tournament.date)}", 
+                    emoji="🏆",
+                    value=count))
+
+                self.options_values[f"{count}"] = tournament
+
+        if options == []:
+            options = [GoldyBot.nextcord.SelectOption(
+                label=f"• There's no MCF being hosted!", 
+                description=f"Time: 3am (UwU Time Zone)", 
+                emoji="⛔",
+                value="None")]
+
+            self.no_mcfs = True
+
+        super().__init__(
+            placeholder="🎯 Choose the tournament to close form for.",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: GoldyBot.nextcord.Interaction):
+        if self.no_mcfs == False:
+            view = await GoldyBot.utility.views.confirm.yes_or_no(interaction)
+            await interaction.send("**Are you sure you would like to close the form for this Tournament?**", view=view)
+            await view.wait()
+
+            if view.value == True:
+                mcf:_tournament_.MCFTournament = self.options_values[self.values[0]]
+
+                if not mcf == None:
+                    if await mcf.close_form():
+                        embed = GoldyBot.utility.goldy.embed.Embed(
+                            title="🔒 MCF Form Closed!",
+                            description=f"""
+                            **❌ The form for the MCF hosting on ``{user_output.make_date_human(mcf.date)}`` has been closed!** 
+                            """,
+                            colour=GoldyBot.utility.goldy.colours.AKI_RED)
+
+                        await interaction.send(embed=embed)
+
+class MCFCloseFormDropdownView(GoldyBot.nextcord.ui.View):
+    def __init__(self, author:GoldyBot.Member, mcf_tournaments:List[_tournament_.MCFTournament]):
+        super().__init__()
+
+        self.add_item(MCFCloseFormDropdown(author, mcf_tournaments))

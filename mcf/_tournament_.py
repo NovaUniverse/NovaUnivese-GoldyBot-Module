@@ -8,8 +8,6 @@ import GoldyBot
 from GoldyBot.utility.datetime import user_output
 from mcf._player_ import MCFPlayer
 
-import errors
-
 MODULE_NAME = "TOURNAMENT"
 
 client:GoldyBot.nextcord.Client = GoldyBot.cache.main_cache_dict["client"]
@@ -27,6 +25,7 @@ class Tournament():
         self.dont_create_ = dont_create
 
         self.was_created_ = False
+        self.is_form_open_ = False
 
     async def init(self):
         """Asyncronous way to run this shit."""
@@ -59,6 +58,17 @@ class Tournament():
 
         return True
 
+    def close_form(self):
+        """Closes the form for this tournmanet. This doesn't cancel the tournament."""
+        self.is_form_open_ = False
+        return True
+
+    def open_form(self):
+        """Opens the form for this tournmanet."""
+        self.is_form_open_ = True
+        
+        return True
+
     @property
     def date(self):
         """Returns the date the mcf tournament will be hosted."""
@@ -68,7 +78,7 @@ class Tournament():
 
         try: 
             return datetime.datetime.fromtimestamp(self.tournament_data[0]["date"])
-        except: 
+        except:
             raise GoldyBot.errors.GoldyBotError("Tournament class must include either params ``date`` and ``time`` or ``tournament_data``!")
             return None
 
@@ -84,6 +94,17 @@ class Tournament():
     def was_created(self):
         """Returns true or false if the tournament was just created."""
         return self.was_created_
+
+    @property
+    def is_form_open(self):
+        """Checks if tournament form is open."""
+        if self.is_form_open_:
+            if self.date.timestamp() > datetime.datetime.now().timestamp():
+                return True
+        return False
+
+    is_open = is_form_open
+    """Checks if tournament form is open."""
 
     @property
     async def tournament_exist(self):
