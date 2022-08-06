@@ -25,7 +25,6 @@ class Tournament():
         self.dont_create_ = dont_create
 
         self.was_created_ = False
-        self.is_form_open_ = False
 
     async def init(self):
         """Asyncronous way to run this shit."""
@@ -43,7 +42,8 @@ class Tournament():
 
         await self.tournament_database.create_collection(user_output.make_date_human(date), {"_id": 0, 
             "date": date.timestamp(),
-            "max_players": int(self.max_players)
+            "max_players": int(self.max_players),
+            "is_form_open": False
         })
 
         self.was_created_ = True
@@ -58,14 +58,23 @@ class Tournament():
 
         return True
 
-    def close_form(self):
+    async def close_form(self):
         """Closes the form for this tournmanet. This doesn't cancel the tournament."""
-        self.is_form_open_ = False
+        await self.tournament_database.edit(user_output.make_date_human(self.date), {"_id": 0},
+            {
+                "is_form_open": False
+            }
+        )
+
         return True
 
-    def open_form(self):
+    async def open_form(self):
         """Opens the form for this tournmanet."""
-        self.is_form_open_ = True
+        await self.tournament_database.edit(user_output.make_date_human(self.date), {"_id": 0},
+            {
+                "is_form_open": True
+            }
+        )
         
         return True
 
@@ -95,10 +104,11 @@ class Tournament():
         """Returns true or false if the tournament was just created."""
         return self.was_created_
 
-    @property
-    def is_form_open(self):
+    async def is_form_open(self):
         """Checks if tournament form is open."""
-        if self.is_form_open_:
+        tournament_data = await self.tournament_database.find_one(user_output.make_date_human(self.date), {"_id":0})
+
+        if tournament_data["is_form_open"]:
             if self.date.timestamp() > datetime.datetime.now().timestamp():
                 return True
         return False
@@ -155,7 +165,7 @@ class MCFTournament(Tournament):
             return None
 
         else:
-            # Not enough space. There's no free team
+            # Not enough space. There's no free team.
             return None
         
     async def add_player(self, player:MCFPlayer):
@@ -163,7 +173,9 @@ class MCFTournament(Tournament):
         await self.tournament_database.insert(user_output.make_date_human(self.date), 
             {
                 "_id": player.member_id,
-                "mc_ign": player.mc_ign
+                "mc_ign": player.mc_ign,
+                "mc_uuid": player.uuid,
+                "team" : None
             })
 
         return True

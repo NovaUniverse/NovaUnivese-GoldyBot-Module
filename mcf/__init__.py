@@ -1,6 +1,20 @@
 import asyncio
-import nextcord
+import os
+import random
 import GoldyBot
+
+from GoldyBot.utility.datetime import *
+
+class Background_Images():
+    def __init__(self):
+        pass
+
+    def get_one(self, bg_number:int=1):
+        """Returns a backgrounud image from that directory."""
+        return f"/assets/background_{bg_number}.png"
+
+    def get_random(self):
+        return __path__[0] + f"/assets/background_{random.randint(1, len(os.listdir(__path__[0] + '/assets')))}.png"
 
 from . import _forms_, _info_, _tournament_, _player_
 
@@ -39,6 +53,15 @@ class MCF(GoldyBot.Extenstion):
             colour=GoldyBot.utility.goldy.colours.WHITE
         )
 
+        self.your_already_registered_embed = GoldyBot.utility.goldy.embed.Embed(
+            title="💚 Your already in! 😊",
+            description=f"""
+            ✔ Your already registered for this week's mcf.
+            """,
+            colour=GoldyBot.utility.goldy.colours.GREEN,
+        )
+        self.your_already_registered_embed.footer.text = "(Notice: Just a reminder that this doesn't mean your actually confirmed to be playing.)"
+
         self.your_not_in_this_weeks_mcf_embed = GoldyBot.utility.goldy.embed.Embed(
             title="❤ Your not in this weeks mcf!",
             description=f"""
@@ -66,13 +89,18 @@ class MCF(GoldyBot.Extenstion):
                 # Stop right here! Don't continue!
                 return False
 
-
-
         @mcf.sub_command(help_des="An amazing command to sign up for the mcf minecraft tournament right from the confort of Discord.")
         async def join(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
-            # Check if a joinable mcf tournament exists.
-            if self.tournament.is_open:
-                await ctx.send_modal(_forms_.JoinMCFForm(self.tournament))
+            if await self.tournament.is_form_open():
+                if not await self.tournament.is_member_registered(GoldyBot.Member(ctx)):
+                    await ctx.send_modal(_forms_.JoinMCFForm(self.tournament))
+                else:
+                    # Your already in!
+                    message = await send(ctx, embed=self.your_already_registered_embed)
+
+                    await asyncio.sleep(15)
+
+                    await message.delete()
             else:
                 message = await send(ctx, embed=self.form_closed)
 
@@ -84,7 +112,7 @@ class MCF(GoldyBot.Extenstion):
         async def leave(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
             member = GoldyBot.Member(ctx)
             
-            if self.tournament.is_form_open:
+            if await self.tournament.is_form_open():
                 # Check if player is registered.
                 if await self.tournament.is_member_registered(member):
                     # If registered remove the player.
@@ -98,17 +126,17 @@ class MCF(GoldyBot.Extenstion):
 
                 await message.delete()
 
-        @mcf.sub_command(help_des="Admin command to create an mcf tournament.", required_roles=["nova_staff"], also_run_parent_CMD=False)
+        @mcf.sub_command(help_des="Admin command to create an mcf tournament.", required_roles=["nova_admin"], also_run_parent_CMD=False)
         async def create(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
             await ctx.send_modal(_forms_.CreateMCFForm())
 
-        @mcf.sub_command(help_des="Admin command to open the mcf form.", required_roles=["nova_staff"], also_run_parent_CMD=False)
+        @mcf.sub_command(help_des="Admin command to open the mcf form.", required_roles=["nova_admin"], also_run_parent_CMD=False)
         async def open_form(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
             tournament_info = _info_.TournamentInfo()
 
             mcf = await tournament_info.get_latest_mcf()
             if not mcf == None:
-                if mcf.open_form():
+                if await mcf.open_form():
                     await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(
                         title="🎉 Form Open!",
                         description="**🎊 The signup form for mcf is open!**",
@@ -123,11 +151,16 @@ class MCF(GoldyBot.Extenstion):
                 ))
                 
 
-        @mcf.sub_command(help_des="Admin command to close the mcf minecraft tournament form.", required_roles=["nova_staff"], also_run_parent_CMD=False)
+        @mcf.sub_command(help_des="Admin command to close the mcf minecraft tournament form.", required_roles=["nova_admin"], also_run_parent_CMD=False)
         async def close_form(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
             tournament_info = _info_.TournamentInfo()
 
-            view = _forms_.MCFCloseFormDropdownView(GoldyBot.Member(ctx), await tournament_info.get_all_mcfs())
+            avaliable_mcf_tournaments = []
+            for tournament in await tournament_info.get_all_mcfs():
+                if await tournament.is_form_open():
+                    avaliable_mcf_tournaments.append(tournament)
+
+            view = _forms_.MCFCloseFormDropdownView(GoldyBot.Member(ctx), avaliable_mcf_tournaments)
 
             await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(
                 title="🛑 Which MCF?",
@@ -135,7 +168,32 @@ class MCF(GoldyBot.Extenstion):
                 colour=GoldyBot.utility.goldy.colours.WHITE
             ), view=view)
 
-        @mcf.sub_command(help_des="Admin command for canceling an MCF tournament.", required_roles=["nova_staff"], also_run_parent_CMD=False)
+        @mcf.sub_command(help_des="Admin command for generating teams.json file.", required_roles=["nova_admin"], also_run_parent_CMD=False)
+        async def teams_json(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
+            tournament_info = _info_.TournamentInfo()
+
+            mcf = await tournament_info.get_latest_mcf()
+            if not mcf == None:
+                player_list = []
+
+                for player_doc in await mcf.tournament_database.find_all(user_output.make_date_human(mcf.date)):
+                    if not player_doc["_id"] == 1:
+                        player_list.append({"uuid":player_doc["mc_uuid"], "username":player_doc["mc_ign"], "discord_id":player_doc["_id"]})
+                
+                await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(
+                    title="🗃 Teams.json generated!",
+                    description="🗄 The file has been generated...",
+                    colour=GoldyBot.utility.goldy.colours.GREY
+                ))
+
+            else:
+                await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(
+                    title="⛔ No MCF!",
+                    description="**🛑 There's no mcf being hosted to generate a teams.json!**",
+                    colour=GoldyBot.utility.goldy.colours.AKI_RED
+                ))
+
+        @mcf.sub_command(help_des="Admin command for canceling an MCF tournament.", required_roles=["nova_admin"], also_run_parent_CMD=False)
         async def cancel(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
             tournament_info = _info_.TournamentInfo()
             

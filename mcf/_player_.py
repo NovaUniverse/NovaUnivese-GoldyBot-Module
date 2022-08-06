@@ -1,5 +1,6 @@
 from __future__ import annotations
 import GoldyBot
+import novauniverse
 from . import _tournament_
 
 class MCFPlayer(GoldyBot.Member):
@@ -15,6 +16,11 @@ class MCFPlayer(GoldyBot.Member):
     def mc_ign(self):
         """Returns minecraft ign of player."""
         return self.mc_ign_
+
+    @property
+    def uuid(self):
+        """Returns minecraft uuid of player."""
+        return novauniverse.Player(self.mc_ign).uuid
 
     @property
     def discord_id(self):

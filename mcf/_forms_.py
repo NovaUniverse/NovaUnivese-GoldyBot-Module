@@ -1,11 +1,14 @@
+import functools
 from typing import Dict, List
 import GoldyBot
 import datetime
 import dateparser
+import threading
 
 from GoldyBot.utility.datetime import user_output
+from GoldyBot.utility.commands import mention
 
-from . import _tournament_, _player_, _info_
+from . import _tournament_, _player_, _info_, Background_Images
 
 database:GoldyBot.Database = GoldyBot.cache.main_cache_dict["database"]
 mcf_database = database.new_instance("mcf_data")
@@ -19,7 +22,7 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
         self.tournament = tournament
 
         self.time_agree = GoldyBot.nextcord.ui.TextInput(
-            label="Will you be on time? (Saturday 18:00 GMT+1)",
+            label=f"Will you be on time? (Saturday {GoldyBot.utility.datetime.user_output.make_time_human(self.tournament.date)} GMT+1)",
             style=GoldyBot.nextcord.TextInputStyle.short,
             placeholder="Yes",
             default_value="No",
@@ -37,24 +40,56 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
         self.add_item(self.mc_username)
 
     async def callback(self, interaction: GoldyBot.nextcord.Interaction) -> None:
-        mcf_player = _player_.MCFPlayer(interaction, 
-            self.mc_username.value)
+        if self.time_agree.value.lower() == "yes":
+            mcf_player = _player_.MCFPlayer(interaction, 
+                self.mc_username.value)
 
-        await self.tournament.add_player(mcf_player)
+            is_this_you_embed = GoldyBot.utility.goldy.embed.Embed(
+                title="❓ Is this you?",
+                colour=GoldyBot.utility.goldy.colours.RED,
+                description=f"""
+                {mention(interaction.user)} Are you sure ``{mcf_player.mc_ign}`` is you?
+                """)
+            
+            is_this_you_embed.set_thumbnail(f"https://crafatar.com/avatars/{mcf_player.uuid}.png")
 
-        embed = GoldyBot.utility.goldy.embed.Embed(
-            title="✅ Join Request Sent!",
-            colour=GoldyBot.utility.goldy.colours.GREEN,
-            description=f"""
-            **Your form has been sent. You've been added to the tournament player list. As the tournament date approaches, you'll be pinged in <#7188671160430632> when your in!**
+            is_this_you_view = await GoldyBot.utility.views.confirm.yes_or_no(interaction)
+            
+            await interaction.send(embed=is_this_you_embed, view=is_this_you_view)
+            
+            await is_this_you_view.wait()
 
-            **[How to Team with Friends?]()**
-            """)
+            if is_this_you_view.value == True:
+                await self.tournament.add_player(mcf_player)
 
-        # Move this message to a discord server help channel.
-        """💌 To team with a friend they must also do ``/join_mcf`` and then your able to send each other team requests via ``/mcf_team``. 😊"""
+                #teams_release_channel = GoldyBot.Channel(interaction, channel_id=718841671160430632)
 
-        await interaction.send(embed=embed)
+                embed = GoldyBot.utility.goldy.embed.Embed(
+                    title="✅ Join Request Sent!",
+                    colour=GoldyBot.utility.goldy.colours.GREEN,
+                    description=f"""
+{mention(interaction.user)} ***Your form has been sent.***
+
+*You've been added to the tournament player list. As the tournament date approaches, you'll be pinged in <#7188671160430632> when your in!*
+
+💌 To team with a friend they must also register with ``/mcf join``, then you'll be able to team with ``/mcf team``. 😊
+                    """)
+
+                #TODO: Teaming command!
+
+                mcf_image = GoldyBot.nextcord.File(Background_Images().get_random(), filename="mcf_image.png")
+                embed.set_image(url="attachment://mcf_image.png")
+                await interaction.send(embed=embed, file=mcf_image)
+
+        else:
+            embed = GoldyBot.utility.goldy.embed.Embed(
+                title="❌ Join Request Rejected!",
+                colour=GoldyBot.utility.goldy.colours.RED,
+                description=f"""
+                *I think you forgot to agree on the time. 🤔*
+                """)
+
+            await interaction.send(embed=embed)
 
 class CreateMCFForm(GoldyBot.nextcord.ui.Modal):
     def __init__(self):
@@ -177,33 +212,33 @@ class MCFCancelDropdownView(GoldyBot.nextcord.ui.View):
 class MCFCloseFormDropdown(GoldyBot.nextcord.ui.Select):
     def __init__(self, author:GoldyBot.Member, mcf_tournaments:List[_tournament_.MCFTournament]):
         self.author = author
+        self.mcf_tournaments = mcf_tournaments
 
-        count = 0
+        self.count = 0
 
         options = []
         self.options_values = {}
         self.no_mcfs = False
 
-        for tournament in mcf_tournaments:
-            if tournament.is_open:
-                count += 1
-                options.append(GoldyBot.nextcord.SelectOption(
-                    label=f"• MCF - {user_output.make_date_human(tournament.date)}", 
-                    description=f"Time: {user_output.make_time_human(tournament.date)}", 
-                    emoji="🏆",
-                    value=count))
+        for tournament in self.mcf_tournaments:
+            self.count += 1
+            options.append(GoldyBot.nextcord.SelectOption(
+                label=f"• MCF - {user_output.make_date_human(tournament.date)}", 
+                description=f"⏰ {user_output.make_time_human(tournament.date)}", 
+                emoji="🏆",
+                value=self.count))
 
-                self.options_values[f"{count}"] = tournament
+            self.options_values[f"{self.count}"] = tournament
 
         if options == []:
             options = [GoldyBot.nextcord.SelectOption(
                 label=f"• There's no MCF being hosted!", 
-                description=f"Time: 3am (UwU Time Zone)", 
+                description=f"⏰ 3am (UwU Time Zone)", 
                 emoji="⛔",
                 value="None")]
 
             self.no_mcfs = True
-
+        
         super().__init__(
             placeholder="🎯 Choose the tournament to close form for.",
             min_values=1,
