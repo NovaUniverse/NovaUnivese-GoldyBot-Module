@@ -2,6 +2,7 @@ import asyncio
 import os
 import random
 import GoldyBot
+import json
 
 from GoldyBot.utility.datetime import *
 
@@ -119,8 +120,48 @@ class MCF(GoldyBot.Extenstion):
                     await self.tournament.remove_player(await self.tournament.get_player(member))
                     await send(ctx, embed=self.youve_been_removed_embed)
 
+                else:
+                    message = await send(ctx, embed=self.your_not_in_this_weeks_mcf_embed)
+
+                    await asyncio.sleep(15)
+
+                    await message.delete()
+
             else:
                 message = await send(ctx, embed=self.form_closed)
+
+                await asyncio.sleep(20)
+
+                await message.delete()
+
+        @mcf.sub_command(help_des="A command that allows you to team up with a friend for the mcf.")
+        async def team(self:MCF, ctx:GoldyBot.objects.slash.InteractionToCtx):
+            if await self.tournament.is_form_open():
+                member = GoldyBot.Member(ctx)
+
+                if await self.tournament.is_member_registered(member):
+                    player_list = []
+
+                    for player_doc in await self.tournament.tournament_database.find_all(user_output.make_date_human(self.tournament.date)):
+                        if not player_doc["_id"] == 0:
+                            player_list.append({"uuid":player_doc["mc_uuid"], "username":player_doc["mc_ign"], "team_number":player_doc["team"], "discord_id":player_doc["_id"]})
+
+                    view = _forms_.MCFTeamPlayersDropdownView(GoldyBot.Member(ctx), player_list)
+
+                    await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(
+                        title="🔥🤝 Who would you like to team with?",
+                        description="**🐱‍🏍 Pick a player.**",
+                        colour=GoldyBot.utility.goldy.colours.WHITE
+                    ), view=view)
+                else:
+                    message = await send(ctx, embed=self.your_not_in_this_weeks_mcf_embed)
+                    await asyncio.sleep(15)
+                    await message.delete()
+
+            else:
+                embed = self.form_closed
+                embed.description += "\n\n *If you would like to team with a player, contact staff immediately.*"
+                message = await send(ctx, embed=embed)
 
                 await asyncio.sleep(20)
 
@@ -177,14 +218,15 @@ class MCF(GoldyBot.Extenstion):
                 player_list = []
 
                 for player_doc in await mcf.tournament_database.find_all(user_output.make_date_human(mcf.date)):
-                    if not player_doc["_id"] == 1:
-                        player_list.append({"uuid":player_doc["mc_uuid"], "username":player_doc["mc_ign"], "discord_id":player_doc["_id"]})
+                    if not player_doc["_id"] == 0:
+                        player_list.append({"uuid":player_doc["mc_uuid"], "username":player_doc["mc_ign"], "team_number":player_doc["team"], "discord_id":player_doc["_id"]})
+
+                json_file = GoldyBot.files.File(__path__[0] + f"/teams_json_dump/mcf_teams_{user_output.make_date_human(mcf.date, date_format='%d_%m_%Y')}.json")
+                json_file.create()
+
+                json_file.write(json.dumps(player_list))
                 
-                await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(
-                    title="🗃 Teams.json generated!",
-                    description="🗄 The file has been generated...",
-                    colour=GoldyBot.utility.goldy.colours.GREY
-                ))
+                await send(ctx, file=GoldyBot.nextcord.File(json_file.file_path))
 
             else:
                 await send(ctx, embed=GoldyBot.utility.goldy.embed.Embed(

@@ -134,7 +134,6 @@ class MCFTournament(Tournament):
     def __init__(self, mcf_database: GoldyBot.Database, mcf_date: str=None, mcf_time: str=None, max_players: str=24, tournament_data=[], dont_create: bool = False):
         super().__init__(mcf_database, mcf_date, mcf_time, max_players, tournament_data, dont_create)
 
-    @property
     async def free_team(self, teammate=None) -> str:
         """Finds a free team with no players that a player can be assigned to. If all teams have a player, a team with a player that has no teammate picked will be returned instead."""
         teams_list = []
@@ -175,7 +174,7 @@ class MCFTournament(Tournament):
                 "_id": player.member_id,
                 "mc_ign": player.mc_ign,
                 "mc_uuid": player.uuid,
-                "team" : None
+                "team" : player.team
             })
 
         return True

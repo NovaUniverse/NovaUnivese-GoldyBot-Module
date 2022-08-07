@@ -51,7 +51,7 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
                 {mention(interaction.user)} Are you sure ``{mcf_player.mc_ign}`` is you?
                 """)
             
-            is_this_you_embed.set_thumbnail(f"https://crafatar.com/avatars/{mcf_player.uuid}.png")
+            is_this_you_embed.set_thumbnail(mcf_player.head_url)
 
             is_this_you_view = await GoldyBot.utility.views.confirm.yes_or_no(interaction)
             
@@ -271,3 +271,68 @@ class MCFCloseFormDropdownView(GoldyBot.nextcord.ui.View):
         super().__init__()
 
         self.add_item(MCFCloseFormDropdown(author, mcf_tournaments))
+
+
+class MCFTeamPlayersDropdown(GoldyBot.nextcord.ui.Select):
+    def __init__(self, author:GoldyBot.Member, mcf_players:List[_player_.MCFPlayer]):
+        self.author = author
+        self.mcf_players = mcf_players
+
+        self.count = 0
+
+        options = []
+        self.options_values = {}
+        self.no_players = False
+
+        for player in self.mcf_players:
+            self.count += 1
+            options.append(GoldyBot.nextcord.SelectOption(
+                label=f"• {player.mc_ign}", 
+                description=f"{GoldyBot.Member(author.ctx, player.discord_id).member.name}", 
+                emoji="⭐",
+                value=self.count))
+
+            self.options_values[f"{self.count}"] = player
+
+        if options == []:
+            options = [GoldyBot.nextcord.SelectOption(
+                label=f"• No one else signed up yet.", 
+                description=f"Just give it time but while your at it, ask a discord friend if they would love to join.", 
+                emoji="😢",
+                value="None")]
+
+            self.no_players = True
+        
+        super().__init__(
+            placeholder="🎯 Choose your teammate.",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: GoldyBot.nextcord.Interaction):
+        if self.no_players == False:
+            player:_player_.MCFPlayer = self.options_values[self.values[0]]
+
+            view = await GoldyBot.utility.views.confirm.yes_or_no(interaction)
+
+            are_you_sure_embed = GoldyBot.utility.goldy.embed.Embed(
+                title="❓ Are you sure?",
+                colour=GoldyBot.utility.goldy.colours.RED,
+                description=f"""
+                {mention(interaction.user)} Are you sure you would like to team with ``{player.mc_ign}``?
+                """)
+
+            are_you_sure_embed.set_thumbnail(player.head_url)
+
+            await interaction.send(embed=are_you_sure_embed, view=view)
+            await view.wait()
+
+            if view.value == True:
+                player.set_teammate() #TODO: Where I left off number 2.
+
+class MCFTeamPlayersDropdownView(GoldyBot.nextcord.ui.View):
+    def __init__(self, author:GoldyBot.Member, mcf_players:List[_player_.MCFPlayer]):
+        super().__init__()
+
+        self.add_item(MCFTeamPlayersDropdown(author, mcf_players))
