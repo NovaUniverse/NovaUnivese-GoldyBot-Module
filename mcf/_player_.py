@@ -9,14 +9,14 @@ MODULE_NAME = "PLAYER"
 
 class MCFPlayer(GoldyBot.Member):
     """Represents a member from the Nova Universe discord server that triggers an MCF command."""
-    def __init__(self, ctx, mc_ign:str=None, team:str=None, pending_teammate_:str=None):
+    def __init__(self, ctx, mc_ign:str=None, team:str=None, pending_teammate_:str=None, player_discord_id:str=None):
         self.ctx = ctx
 
         self.mc_ign_ = mc_ign
         self.team_ = team
         self.pending_teammate_ = pending_teammate_
 
-        super().__init__(ctx)
+        super().__init__(ctx, member_id=player_discord_id)
 
     @property
     def mc_ign(self):
@@ -26,7 +26,7 @@ class MCFPlayer(GoldyBot.Member):
     @property
     def uuid(self):
         """Returns minecraft uuid of player."""
-        return novauniverse.Player(self.mc_ign).uuid
+        return str(novauniverse._find_.player_name_to_uuid(self.mc_ign))
 
     @property
     def team(self) -> str|None:
@@ -42,13 +42,16 @@ class MCFPlayer(GoldyBot.Member):
         """Sets teammate of player, the teammate has to also have their teammate set to this player for them to officially become teammates. (Complicated I know)"""
         mcf = await _info_.TournamentInfo().get_latest_mcf()
 
-        if not mcf_player.pending_teammate == None:
-            if mcf_player.pending_teammate == self.discord_id:
+        mcf_player_doc = await mcf.tournament_database.find(user_output.make_date_human(mcf.date), {"_id":mcf_player.discord_id}, key="_id", max_to_find=1000)
+        mcf_player_doc = mcf_player_doc[0]
+
+        if not mcf_player_doc["pending_teammate"] == None:
+            if mcf_player_doc["pending_teammate"] == self.discord_id:
                 # Assign them into a team.
                 free_team = await mcf.free_team(mcf_player)
 
                 # Assign team to this player.
-                mcf.tournament_database.edit(user_output.make_date_human(mcf.date), {
+                await mcf.tournament_database.edit(user_output.make_date_human(mcf.date), {
                     "_id": self.discord_id
                 },
                 {
@@ -56,22 +59,26 @@ class MCFPlayer(GoldyBot.Member):
                 })
 
                 # Assign team to teammate.
-                mcf.tournament_database.edit(user_output.make_date_human(mcf.date), {
+                await mcf.tournament_database.edit(user_output.make_date_human(mcf.date), {
                     "_id": mcf_player.discord_id
                 },
                 {
                     "team": free_team
-                }) #TODO: Where I left off, add print statements. Also else don't assign them.
-        else:
-            # Don't assign them into a team yet, give this player a pending teammate id.
-            mcf.tournament_database.edit(user_output.make_date_human(mcf.date), {
-                    "_id": self.discord_id
-                },
-                {
-                    "pending_teammate": mcf_player.discord_id
                 })
 
-            GoldyBot.log(f"[{MODULE_NAME}] I didn't assign '{self.name}' a teammate right away because I'm waiting on the teammate ({mcf_player.name}) to also team with them.")
+                GoldyBot.log(f"[{MODULE_NAME}] I assigned '{self.name}' in team {free_team} with {mcf_player.name}.")
+                return True
+
+        # Don't assign them into a team yet, give this player a pending teammate id.
+        await mcf.tournament_database.edit(user_output.make_date_human(mcf.date), {
+                "_id": self.discord_id
+            },
+            {
+                "pending_teammate": mcf_player.discord_id
+            })
+
+        GoldyBot.log(f"[{MODULE_NAME}] I didn't assign '{self.name}' a teammate right away because I'm waiting on the teammate ({mcf_player.name}) to also team with them.")
+        return None
 
 
     @property

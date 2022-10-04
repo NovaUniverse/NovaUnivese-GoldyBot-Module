@@ -42,7 +42,7 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
     async def callback(self, interaction: GoldyBot.nextcord.Interaction) -> None:
         if self.time_agree.value.lower() == "yes":
             mcf_player = _player_.MCFPlayer(interaction, 
-                self.mc_username.value)
+                self.mc_username.value, player_discord_id=interaction.user.id)
 
             is_this_you_embed = GoldyBot.utility.goldy.embed.Embed(
                 title="❓ Is this you?",
@@ -55,9 +55,11 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
 
             is_this_you_view = await GoldyBot.utility.views.confirm.yes_or_no(interaction)
             
-            await interaction.send(embed=is_this_you_embed, view=is_this_you_view)
+            message = await interaction.send(embed=is_this_you_embed, view=is_this_you_view)
             
             await is_this_you_view.wait()
+
+            await message.delete()
 
             if is_this_you_view.value == True:
                 await self.tournament.add_player(mcf_player)
@@ -74,8 +76,6 @@ class JoinMCFForm(GoldyBot.nextcord.ui.Modal):
 
 💌 To team with a friend they must also register with ``/mcf join``, then you'll be able to team with ``/mcf team``. 😊
                     """)
-
-                #TODO: Teaming command!
 
                 mcf_image = GoldyBot.nextcord.File(Background_Images().get_random(), filename="mcf_image.png")
                 embed.set_image(url="attachment://mcf_image.png")
@@ -287,8 +287,8 @@ class MCFTeamPlayersDropdown(GoldyBot.nextcord.ui.Select):
         for player in self.mcf_players:
             self.count += 1
             options.append(GoldyBot.nextcord.SelectOption(
-                label=f"• {player.mc_ign}", 
-                description=f"{GoldyBot.Member(author.ctx, player.discord_id).member.name}", 
+                label=f"{player.mc_ign}", 
+                description=f"{player.name  + '#' + player.member.discriminator}", 
                 emoji="⭐",
                 value=self.count))
 
@@ -297,7 +297,7 @@ class MCFTeamPlayersDropdown(GoldyBot.nextcord.ui.Select):
         if options == []:
             options = [GoldyBot.nextcord.SelectOption(
                 label=f"• No one else signed up yet.", 
-                description=f"Just give it time but while your at it, ask a discord friend if they would love to join.", 
+                description=f"Ask a discord friend if they would love to join.", 
                 emoji="😢",
                 value="None")]
 
@@ -313,6 +313,8 @@ class MCFTeamPlayersDropdown(GoldyBot.nextcord.ui.Select):
     async def callback(self, interaction: GoldyBot.nextcord.Interaction):
         if self.no_players == False:
             player:_player_.MCFPlayer = self.options_values[self.values[0]]
+            author = GoldyBot.Member(interaction, interaction.user.id)
+            tournament = await _info_.TournamentInfo().get_latest_mcf()
 
             view = await GoldyBot.utility.views.confirm.yes_or_no(interaction)
 
@@ -320,16 +322,41 @@ class MCFTeamPlayersDropdown(GoldyBot.nextcord.ui.Select):
                 title="❓ Are you sure?",
                 colour=GoldyBot.utility.goldy.colours.RED,
                 description=f"""
-                {mention(interaction.user)} Are you sure you would like to team with ``{player.mc_ign}``?
+                {mention(author)} Are you sure you would like to team with {mention(player)}?
                 """)
 
             are_you_sure_embed.set_thumbnail(player.head_url)
 
-            await interaction.send(embed=are_you_sure_embed, view=view)
+            message = await interaction.send(embed=are_you_sure_embed, view=view)
             await view.wait()
+            await message.delete()
 
             if view.value == True:
-                player.set_teammate() #TODO: Where I left off number 2.
+                # Set teammate.
+                teamming_status = await player.set_teammate(mcf_player=await tournament.get_player(author))
+
+                if teamming_status == True:
+                    # Your now teamed with that player.
+                    embed = GoldyBot.utility.goldy.embed.Embed(
+                        title="🛡 You are now teamed! ✅",
+                        description=f"""
+                        💚 Your now teamed with {GoldyBot.utility.commands.mention(player)}.
+                        """,
+                        colour=GoldyBot.utility.goldy.colours.GREEN)
+
+                    await interaction.send(embed=embed)
+
+                if teamming_status == None:
+                    # Teammate request sent, your pending teammate is now '...'. To officially team together, your friend must also send a request.
+                    embed = GoldyBot.utility.goldy.embed.Embed(
+                        title="✉ Team request sent!",
+                        description=f"""
+                        🛡 {GoldyBot.utility.commands.mention(player)} will now need to send a request back to officially team.
+                        """,
+                        colour=GoldyBot.utility.goldy.colours.WHITE)
+                    
+                    embed.set_thumbnail(player.head_url)
+                    await interaction.send(embed=embed)
 
 class MCFTeamPlayersDropdownView(GoldyBot.nextcord.ui.View):
     def __init__(self, author:GoldyBot.Member, mcf_players:List[_player_.MCFPlayer]):

@@ -9,9 +9,15 @@ OPEN_SOURCE_LINK = 'https://github.com/NovaUniverse/novacord'
 VERSION = 1.1
 
 import errors
-import staff, mcf
+import staff, mcf, mcf_signup
 
 def load():
-    # This function get's executed when the module is loaded, so run your extenstion classes in here.
+    # This function get's executed when the module is loaded, so run your extension classes in here.
     staff.NovaStaffUtils(package_module_name=__name__)
-    mcf.MCF(package_module=__name__)
+    #mcf.MCF(package_module=__name__)
+
+    #  MCF Sign Up System
+    #==============================
+    # Loading it's extensions.
+    mcf_signup.MCFSignup(__name__)
+    mcf_signup.MCFSignupStaff(__name__)

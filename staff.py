@@ -5,7 +5,7 @@ import nextcord
 import GoldyBot
 from GoldyBot.utility.commands import *
 
-class NovaStaffUtils(GoldyBot.Extenstion):
+class NovaStaffUtils(GoldyBot.Extension):
     def __init__(self, package_module_name=None):
         super().__init__(self, package_module_name)
 
@@ -38,7 +38,7 @@ class NovaStaffUtils(GoldyBot.Extenstion):
             required_roles=["nova_staff"], slash_cmd_only=True)
         async def clear_mcf_team_roles(self:NovaStaffUtils, ctx):
             
-            # FINSIH THIS!
+            # FINISH THIS!
 
             await ctx.send("done")
 
