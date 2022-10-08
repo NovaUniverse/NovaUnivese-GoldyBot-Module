@@ -36,6 +36,13 @@ class MCFSignupStaff(GoldyBot.Extension):
             colour=GoldyBot.utility.goldy.colours.RED
         )
 
+        self.no_tournaments_exist = GoldyBot.Embed(
+            title="🌵🕸 No tournaments exist.",
+            description="There's no tournaments currently in the list, you can create one with {}.",
+            colour=GoldyBot.Colours.LIME_GREEN
+        )
+
+
         # Views
 
         self.which_mcf = GoldyBot.Embed(
@@ -62,6 +69,9 @@ class MCFSignupStaff(GoldyBot.Extension):
                 max_players=69,
                 creator=GoldyBot.Member(ctx)
             ) #TODO: Change to form input.
+
+            # Send Form
+            
 
             # Add tournament to database and send embed if added.
             if await database.Tournament(ctx, tournament_data).setup():
@@ -104,12 +114,19 @@ class MCFSignupStaff(GoldyBot.Extension):
 
                 id += 1
 
-            async def delete_tournaments(ids): 
-                for id in ids: 
-                    await database.Tournament(ctx, all_mcf_tournaments[int(id)]).remove()
+            if not options == []: # If not empty.
+                async def delete_tournaments(ids): 
+                    for id in ids: 
+                        await database.Tournament(ctx, all_mcf_tournaments[int(id)]).remove()
 
-            view = await GoldyBot.utility.views.dropdown.dropdown(ctx, options, min_max_value=(1, 5), callback=delete_tournaments)
-            await send(ctx, embed=self.which_mcf, view=view)
+                view = await GoldyBot.utility.views.dropdown.dropdown(ctx, options, min_max_value=(1, 5), callback=delete_tournaments)
+                await send(ctx, embed=self.which_mcf, view=view)
+            
+            else:
+                embed = self.no_tournaments_exist.copy()
+                embed.description = self.no_tournaments_exist.description.format(create.mention())
+                message = await send(ctx, embed=embed)
+                await message.delete(delay=6)
 
 
             # TEMPORARY CODE
