@@ -1,4 +1,10 @@
+from datetime import datetime
 import GoldyBot
+
+from . import objects
+from . import database
+
+mcf_database = GoldyBot.cache.database().new_instance("mcf_data")
 
 class MCFSignup(GoldyBot.Extension):
     def __init__(self, package_module=None):
@@ -55,4 +61,28 @@ class MCFSignup(GoldyBot.Extension):
 
         @mcf.sub_command()
         async def join(self:MCFSignup, ctx):
-            pass
+
+            # TEMPORARY
+            tournament_data = objects.TournamentData(
+                mcf_database,
+                datetime(2000, 12, 14, 7, 15, 29, 24, tzinfo=None),
+                max_players=69
+            )
+
+            player_data = objects.PlayerData(GoldyBot.Member(ctx), "THEGOLDENPRO", "1", pending_teammate=None)
+            
+            await database.Tournament(ctx, tournament_data).add_player(player_data)
+
+        @mcf.sub_command()
+        async def leave(self:MCFSignup, ctx):
+
+            # TEMPORARY
+            tournament_data = objects.TournamentData(
+                mcf_database,
+                datetime(2000, 12, 14, 7, 15, 29, 24, tzinfo=None),
+                max_players=69
+            )
+
+            player_data = objects.PlayerData(GoldyBot.Member(ctx), "THEGOLDENPRO", "1", pending_teammate=None)
+            
+            await database.Tournament(ctx, tournament_data).remove_player(player_data)

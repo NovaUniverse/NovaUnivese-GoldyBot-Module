@@ -1,3 +1,4 @@
+from typing import List
 import GoldyBot
 from GoldyBot.utility.commands import *
 
@@ -35,6 +36,14 @@ class MCFSignupStaff(GoldyBot.Extension):
             colour=GoldyBot.utility.goldy.colours.RED
         )
 
+        # Views
+
+        self.which_mcf = GoldyBot.Embed(
+            title="🛑 Which MCF?",
+            description="**⏱ Pick the mcf you would like to cancel.**",
+            colour=GoldyBot.utility.goldy.colours.WHITE
+        )
+
     def loader(self):
 
         @GoldyBot.command(help_des="Allows admins to create, edit and cancel an mcf tournament.", slash_cmd_only=True, required_roles=["nova_admin", "nova_tournament_host"])
@@ -50,8 +59,9 @@ class MCFSignupStaff(GoldyBot.Extension):
             tournament_data = objects.TournamentData(
                 mcf_database,
                 datetime(2000, 12, 14, 7, 15, 29, 24, tzinfo=None),
-                max_players=69
-            )
+                max_players=69,
+                creator=GoldyBot.Member(ctx)
+            ) #TODO: Change to form input.
 
             # Add tournament to database and send embed if added.
             if await database.Tournament(ctx, tournament_data).setup():
@@ -78,18 +88,40 @@ class MCFSignupStaff(GoldyBot.Extension):
 
         @mcf_admin.sub_command()
         async def cancel(self:MCFSignupStaff, ctx):
+            all_mcf_tournaments = await database.McfDataUtils(ctx, mcf_database).get_all_tournaments()
+
+            options:List[GoldyBot.nextcord.SelectOption] = []
+
+            id = 0
+            for tournament in all_mcf_tournaments:
+                options.append(
+                    GoldyBot.nextcord.SelectOption(
+                        label=f"🔥 MCF - {GoldyBot.utility.datetime.user_output.make_date_human(tournament.time_and_date, date_format='(%a, %d %b)')}",
+                        description=f"{GoldyBot.utility.datetime.user_output.make_date_human(tournament.time_and_date, date_format='%Y')} • Created By '{tournament.creator.name}'",
+                        value=id
+                    )
+                )
+
+                id += 1
+
+            async def delete_tournaments(ids): 
+                for id in ids: 
+                    await database.Tournament(ctx, all_mcf_tournaments[int(id)]).remove()
+
+            view = await GoldyBot.utility.views.dropdown.dropdown(ctx, options, min_max_value=(1, 5), callback=delete_tournaments)
+            await send(ctx, embed=self.which_mcf, view=view)
+
 
             # TEMPORARY CODE
-
+            """
             tournament_data = objects.TournamentData(
                 mcf_database,
                 datetime(2000, 12, 14, 7, 15, 29, 24, tzinfo=None),
                 max_players=69
-            )
+            ) #TODO: Change to form input.
 
-            await database.Tournament(ctx, tournament_data).remove()
-                    
-
+            await database.Tournament(ctx, tournament_data).remove()   
+            """
 
         #  Form commands.
         #====================

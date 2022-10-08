@@ -5,11 +5,12 @@ from datetime import datetime
 
 class TournamentData():
     """Class containing all info to create a tournament."""
-    def __init__(self, database:GoldyBot.Database, time_and_date:datetime, max_players:int):
+    def __init__(self, database:GoldyBot.Database, time_and_date:datetime, max_players:int, creator:GoldyBot.Member):
         self.database_ = database
 
         self.time_and_date_ = time_and_date
         self.max_players_ = max_players
+        self.creator_ = creator
 
     @property
     def database(self):
@@ -22,3 +23,7 @@ class TournamentData():
     @property
     def max_players(self):
         return self.max_players_
+
+    @property
+    def creator(self):
+        return self.creator_
