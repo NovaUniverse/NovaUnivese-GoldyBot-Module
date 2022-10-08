@@ -71,7 +71,14 @@ class MCFSignupStaff(GoldyBot.Extension):
             ) #TODO: Change to form input.
 
             # Send Form
-            
+            await send_modal(ctx, 
+                await GoldyBot.utility.views.forms.normal_form(
+                    title="🏆 Create Tournament",
+                    items=[
+
+                    ]
+                )
+            )
 
             # Add tournament to database and send embed if added.
             if await database.Tournament(ctx, tournament_data).setup():

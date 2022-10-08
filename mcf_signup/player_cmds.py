@@ -1,5 +1,7 @@
 from datetime import datetime
+from typing import List
 import GoldyBot
+from GoldyBot.utility.commands import *
 
 from . import objects
 from . import database
@@ -61,17 +63,47 @@ class MCFSignup(GoldyBot.Extension):
 
         @mcf.sub_command()
         async def join(self:MCFSignup, ctx):
-
             # TEMPORARY
-            tournament_data = objects.TournamentData(
-                mcf_database,
-                datetime(2000, 12, 14, 7, 15, 29, 24, tzinfo=None),
-                max_players=69
-            )
+            tournament_data = await database.McfDataUtils(ctx, mcf_database).get_latest_tournament()
 
-            player_data = objects.PlayerData(GoldyBot.Member(ctx), "THEGOLDENPRO", "1", pending_teammate=None)
-            
-            await database.Tournament(ctx, tournament_data).add_player(player_data)
+            #TODO: Check if member is already in tournament.
+
+            async def signup_player(answers:List[str]):
+                ign = answers[0]
+                agree = answers[1]
+
+                if agree.lower() == "yes":
+                    player_data = objects.PlayerData(GoldyBot.Member(ctx), ign, "1", pending_teammate=None)
+                    
+                    await database.Tournament(ctx, tournament_data).add_player(player_data)
+
+                    #TODO: Notify member.
+
+                else:
+                    #TODO: Notify member.
+                    pass
+
+            # Send Signup Form
+            await send_modal(ctx, 
+                await GoldyBot.utility.views.forms.normal_form(
+                    title = "🏆 Play In 🔥MCF!",
+                    items = [
+                        GoldyBot.nextcord.ui.TextInput(
+                            label="Minecraft IGN: ", style=GoldyBot.nextcord.TextInputStyle.short, placeholder="THEGOLDENPRO", required=True
+                        ),
+                        GoldyBot.nextcord.ui.TextInput(
+                            label=f"Will you make it? ({tournament_data.time_and_date.strftime('%A, %d %b')})", 
+                            style=GoldyBot.nextcord.TextInputStyle.short,
+                            placeholder="Type 'Yes' to agree...",
+                            default_value="No",
+                            min_length=2,
+                            max_length=3
+                        )
+                    ],
+                    callback = signup_player,
+                    author = GoldyBot.Member(ctx)
+                )
+            )
 
         @mcf.sub_command()
         async def leave(self:MCFSignup, ctx):

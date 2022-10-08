@@ -18,17 +18,11 @@ class McfDataUtils():
     async def get_latest_tournament(self) -> objects.TournamentData | None:
         """Returns the latest tournament that has not started. Returns 'None' if there are none or all tournaments have passed their start date."""
 
-        all_tournaments = await self.database.find_all(TOURNAMENTS_COLLECTION)
-        all_tournaments.sort(key=(lambda x: x["event_start_at"]))
+        all_tournaments = await self.get_all_tournaments()
 
         try:
-            if not datetime.now().timestamp() > all_tournaments[0]["event_start_at"]:
-                return objects.TournamentData(
-                    self.database,
-                    time_and_date=datetime.fromtimestamp(all_tournaments[0]["event_start_at"]),
-                    max_players=all_tournaments[0]["max_players"],
-                    creator=GoldyBot.Member(self.ctx, member_id=all_tournaments[0]["created_by"])
-                )
+            if not datetime.now().timestamp() > all_tournaments[0].time_and_date.timestamp():
+                return all_tournaments[0]
 
             else:
                 return None
@@ -42,6 +36,7 @@ class McfDataUtils():
         """Returns information of every tournament in the 'tournaments' collection."""
         all_tournaments = await self.database.find_all(TOURNAMENTS_COLLECTION)
         all_tournaments.sort(key=(lambda x: x["event_start_at"]))
+        all_tournaments.reverse()
 
         tourny_list:List[objects.TournamentData] = []
 
