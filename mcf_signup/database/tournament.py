@@ -75,9 +75,12 @@ class Tournament():
             if not team == None:
                 all_used_team_nums.append(team)
 
-        # Find last used team number and return the number after that as a free team.
-        all_used_team_nums.sort()
-        return str(int(all_used_team_nums[-1]) + 1)
+        if len(all_used_team_nums) > 0:
+            # Find last used team number and return the number after that as a free team.
+            all_used_team_nums.sort()
+            return str(int(all_used_team_nums[-1]) + 1)
+        else:
+            return "1"
 
 
     async def add_player(self, player_data:objects.PlayerData):
@@ -87,21 +90,21 @@ class Tournament():
 
         if not await self.player_in_tournament(player_data.member, tournament_data):
 
+            tournament_data["players"][player_data.member.member_id] = {
+
+                "discord_id" : str(player_data.member.member_id),
+                "mc_ign" : str(player_data.mc_ign),
+                "mc_uuid" : str(player_data.mc_uuid),
+                "team" : str(player_data.team),
+                # Returns 'None' if pending_teammate is none but returns 'pending_teammate.discord_id' if not None.
+                "pending_teammate": (lambda teammate: None if (teammate == None) else teammate.member_id)(player_data.pending_teammate) 
+            
+            }
+
             await self.database.edit(
                 TOURNAMENTS_COLLECTION, 
                 query = {"_id":int(self.tournament_data.time_and_date.timestamp())},
-
-                data = {
-                    "players": {
-                        f"{player_data.member.member_id}": {
-                            "discord_id" : str(player_data.member.member_id),
-                            "mc_ign" : str(player_data.mc_ign),
-                            "mc_uuid" : str(player_data.mc_uuid),
-                            "team" : str(player_data.team),
-                            "pending_teammate": (lambda teammate: None if (teammate == None) else teammate.member_id)(player_data.pending_teammate) # Returns 'None' if pending_teammate is none but returns 'pending_teammate.discord_id' if not None.
-                        }
-                    }
-                }
+                data=tournament_data
             )
 
             return True
@@ -134,18 +137,18 @@ class Tournament():
     async def team_player(self, member:GoldyBot.Member, teammate:GoldyBot.Member):
         """Sets the pending teammate of the first player to the 2nd player. Repeating this for the 2nd player will make these two players officially teamed."""
         # Get tournament current data.
-        tournament_data = await self.get_tournament_data()
+        tournament_database_data = await self.get_tournament_data()
 
-        if await self.player_in_tournament(member, tournament_data):
+        if await self.player_in_tournament(member, tournament_database_data):
 
             # Editing player pending teammate in dict.
-            tournament_data["players"][member.member_id]["pending_teammate"] = teammate.member_id
+            tournament_database_data["players"][member.member_id]["pending_teammate"] = teammate.member_id
             
             # Update database with edited player pending teammate.
             await self.database.edit(
                 TOURNAMENTS_COLLECTION, 
                 query={"_id":int(self.tournament_data.time_and_date.timestamp())},
-                data=tournament_data
+                data=tournament_database_data
             )
 
             return True
@@ -153,10 +156,10 @@ class Tournament():
         return False
 
 
-    async def player_in_tournament(self, member:GoldyBot.Member, tournament_data:dict) -> bool:
+    async def player_in_tournament(self, member:GoldyBot.Member, tournament_database_data:dict) -> bool:
         """Checks if player is in tournament."""
 
-        if not tournament_data["players"].get(member.member_id) == None:
+        if not tournament_database_data["players"].get(member.member_id) == None:
             return True
 
         return False

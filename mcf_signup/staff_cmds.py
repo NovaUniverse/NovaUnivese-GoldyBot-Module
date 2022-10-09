@@ -136,16 +136,6 @@ class MCFSignupStaff(GoldyBot.Extension):
                 await message.delete(delay=6)
 
 
-            # TEMPORARY CODE
-            """
-            tournament_data = objects.TournamentData(
-                mcf_database,
-                datetime(2000, 12, 14, 7, 15, 29, 24, tzinfo=None),
-                max_players=69
-            ) #TODO: Change to form input.
-
-            await database.Tournament(ctx, tournament_data).remove()   
-            """
 
         #  Form commands.
         #====================
