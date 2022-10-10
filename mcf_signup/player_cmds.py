@@ -48,7 +48,7 @@ class MCFSignup(GoldyBot.Extension):
             description="""
             🚚 You've been removed from this mcf.
             """,
-            colour=GoldyBot.utility.goldy.colours.WHITE
+            colour=GoldyBot.Colours.DISCORD_EMBED_INVISIBLE
         )
 
         self.your_already_registered_embed = GoldyBot.utility.goldy.embed.Embed(
@@ -56,7 +56,7 @@ class MCFSignup(GoldyBot.Extension):
             description=f"""
             ✔ You're already registered for this upcoming mcf.
             """,
-            colour=GoldyBot.utility.goldy.colours.GREEN,
+            colour=GoldyBot.Colours.DISCORD_EMBED_INVISIBLE,
         )
         self.your_already_registered_embed.footer.text = "(Notice: Just a reminder that this doesn't mean your actually confirmed to be playing.)"
 
@@ -65,7 +65,7 @@ class MCFSignup(GoldyBot.Extension):
             description=f"""
             ⚠ You're not registered for this mcf.
             """,
-            colour=GoldyBot.utility.goldy.colours.RED
+            colour=GoldyBot.Colours.DISCORD_EMBED_INVISIBLE
         )
 
         self.agree_to_time = GoldyBot.utility.goldy.embed.Embed(
@@ -73,7 +73,7 @@ class MCFSignup(GoldyBot.Extension):
             description=f"""
             ⚠ You MUST replace ``No`` with ``Yes`` to agree to the tournament time.
             """,
-            colour=GoldyBot.utility.goldy.colours.RED
+            colour=GoldyBot.Colours.RED
         )
 
 

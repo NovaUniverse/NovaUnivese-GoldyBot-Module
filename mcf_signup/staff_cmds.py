@@ -15,7 +15,7 @@ class MCFSignupStaff(GoldyBot.Extension):
 
         # Embeds
         #==========
-        self.tournament_created = GoldyBot.utility.goldy.embed.Embed(
+        self.tournament_created = GoldyBot.Embed(
             title="🔥 Tournament has been created!",
             description="""
             ✅ Tournament has been created for **<t:{}:{}>**.
@@ -25,13 +25,20 @@ class MCFSignupStaff(GoldyBot.Extension):
             colour=GoldyBot.utility.goldy.colours.AKI_ORANGE
         )
 
-
         self.tournament_already_exist = GoldyBot.utility.goldy.embed.Embed(
             title="🛑 Tournament already exist!",
             description="""
             ❌ There is already a tournament for **<t:{}:{}>**.
 
             {} *- To cancel it.*
+            """,
+            colour=GoldyBot.utility.goldy.colours.RED
+        )
+
+        self.date_or_time_incorrect = GoldyBot.Embed(
+            title="📅❌ Datetime incorrect!",
+            description="""
+            ❌ It seems like you've entered either the date or time incorrectly, please try again.
             """,
             colour=GoldyBot.utility.goldy.colours.RED
         )
@@ -62,46 +69,81 @@ class MCFSignupStaff(GoldyBot.Extension):
 
         @mcf_admin.sub_command()
         async def create(self:MCFSignupStaff, ctx):
-            # Create tournament data object.
-            tournament_data = objects.TournamentData(
-                mcf_database,
-                datetime(2000, 12, 14, 7, 15, 29, 24, tzinfo=None),
-                max_players=69,
-                creator=GoldyBot.Member(ctx)
-            ) #TODO: Change to form input.
+            creator = GoldyBot.Member(ctx)
+
+            async def create_tourny(answers:List[str], interaction):
+                date = answers[0]
+                time = answers[1]
+                max_players = answers[2]
+
+                time_and_date = GoldyBot.utility.datetime.user_input.get_time_and_date(f"{date} {time}")
+
+                if isinstance(time_and_date, datetime):
+                    # Create tournament data object.
+                    tournament_data = objects.TournamentData(mcf_database, time_and_date, max_players, creator)
+
+                    # Add tournament to database and send embed if added.
+                    if await database.Tournament(ctx, tournament_data).setup():
+                        # Notify admin tournament has been created.
+                        embed = self.tournament_created.copy()
+                        embed.description = self.tournament_created.description.format(
+                            int(tournament_data.time_and_date.timestamp()),
+                            "F",
+                            open_form.mention()
+                        )
+                        
+                        await send(ctx, embed=embed)
+
+                    else:
+                        # Tournament already exist with this date.
+                        embed = self.tournament_already_exist.copy()
+                        embed.description = self.tournament_already_exist.description.format(
+                            int(tournament_data.time_and_date.timestamp()),
+                            "F",
+                            cancel.mention()
+                        )
+                        
+                        message = await send(interaction, embed=embed)
+                        await message.delete(delay=6)
+                else:
+                    # Date or time incorrect.
+                    message = await send(interaction, embed=self.date_or_time_incorrect)
+                    await message.delete(delay=6)
 
             # Send Form
             await send_modal(ctx, 
-                await GoldyBot.utility.views.forms.normal_form(
+                GoldyBot.utility.views.forms.normal_form(
                     title="🏆 Create Tournament",
                     items=[
+                        GoldyBot.nextcord.ui.TextInput(
+                            "Event Date: ",
+                            style=GoldyBot.nextcord.TextInputStyle.short,
+                            default_value=datetime.now().strftime("%d/%m/%Y"),
+                            placeholder="e.g. 21.09.2023",
+                            required=True
+                        ),
+                        
+                        GoldyBot.nextcord.ui.TextInput(
+                            "Event Time: ",
+                            style=GoldyBot.nextcord.TextInputStyle.short,
+                            default_value=datetime.now().strftime("%H:%M"),
+                            placeholder="e.g. 3:00",
+                            required=True
+                        ),
 
-                    ]
+                        GoldyBot.nextcord.ui.TextInput(
+                            "Max Players: ",
+                            style=GoldyBot.nextcord.TextInputStyle.short,
+                            default_value="24",
+                            placeholder="max players uwu",
+                            required=True
+                        )
+                    ],
+                    callback=create_tourny,
+                    author=creator
                 )
             )
 
-            # Add tournament to database and send embed if added.
-            if await database.Tournament(ctx, tournament_data).setup():
-                # Tournament Created.
-                embed = self.tournament_created.copy()
-                embed.description = self.tournament_created.description.format(
-                    int(tournament_data.time_and_date.timestamp()),
-                    "F",
-                    open_form.mention()
-                )
-                
-                await send(ctx, embed=embed)
-
-            else:
-                # Tournament already exist with this date.
-                embed = self.tournament_already_exist.copy()
-                embed.description = self.tournament_already_exist.description.format(
-                    int(tournament_data.time_and_date.timestamp()),
-                    "F",
-                    cancel.mention()
-                )
-                
-                await send(ctx, embed=embed)
 
         @mcf_admin.sub_command()
         async def cancel(self:MCFSignupStaff, ctx):
