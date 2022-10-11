@@ -1,9 +1,12 @@
+import json
 from typing import List
 import GoldyBot
 from GoldyBot.utility.commands import *
+from GoldyBot.utility.datetime import user_output
 
 from . import objects
 from . import database
+from . import Background_Images, PATH
 
 from datetime import datetime
 
@@ -177,6 +180,54 @@ class MCFSignupStaff(GoldyBot.Extension):
                 message = await send(ctx, embed=embed)
                 await message.delete(delay=6)
 
+
+        #  Team JSON commands.
+        #====================
+
+        @mcf_admin.sub_command(help_des="A sub command for grabbing and updating the teams via a JSON and Zeeraa's team editor.")
+        async def teams_json(self:MCFSignupStaff, ctx):
+            pass
+
+
+        @teams_json.sub_command()
+        async def get(self, ctx):
+            # Get the latest tournament data.
+            latest_tournament_data = await database.McfDataUtils(ctx, mcf_database).get_latest_tournament()
+
+            if isinstance(latest_tournament_data, objects.TournamentData):
+                latest_tournament = database.Tournament(ctx, latest_tournament_data)
+
+                tournament_database_data = await latest_tournament.get_tournament_data()
+
+                # Generate teams json list.
+                teams_json_list = []
+                for player in tournament_database_data["players"]:
+                    teams_json_list.append({
+                        "uuid": tournament_database_data["players"][player]["mc_uuid"],
+                        "username": tournament_database_data["players"][player]["mc_ign"],
+                        "team_number": tournament_database_data["players"][player]["team"],
+
+                        "metadata": {
+                            "discord_id": tournament_database_data["players"][player]["discord_id"]
+                        }
+                    })
+
+                # Save and send json.
+                json_file = GoldyBot.files.File(PATH + f"/teams_json_dump/mcf_teams_{user_output.make_date_human(latest_tournament_data.time_and_date, date_format='%d_%m_%Y')}.json")
+                json_file.create()
+
+                json_file.write(json.dumps(teams_json_list))
+                
+                await send(ctx, file=GoldyBot.nextcord.File(json_file.file_path))
+
+            else:
+                #TODO: Notify admin there's no tournament.
+                pass
+
+
+        @teams_json.sub_command(help_des="Allows an admin to override the teams with a teams.json file from Zeeraa's team editor.")
+        async def edit(self, ctx:GoldyBot.Context):
+            pass
 
 
         #  Form commands.
