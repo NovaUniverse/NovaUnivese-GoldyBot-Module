@@ -188,7 +188,6 @@ class MCFSignupStaff(GoldyBot.Extension):
         async def teams_json(self:MCFSignupStaff, ctx):
             pass
 
-
         @teams_json.sub_command()
         async def get(self, ctx):
             # Get the latest tournament data.
