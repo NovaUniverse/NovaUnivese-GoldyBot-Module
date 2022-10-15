@@ -62,10 +62,18 @@ class Tournament():
         self.database = tournament_data.database
 
 
-    def free_team(self, tournament_data:dict) -> str:
+    def is_form_open(self, tournament_database_data:dict) -> bool:
+        """Returns True or False if the form is open or not."""
+        if tournament_database_data.get("form_open") == True:
+            return True
+
+        return False
+
+
+    def free_team(self, tournament_database_data:dict) -> str:
         """Returns a free team."""
 
-        players:Dict[str, dict] = tournament_data["players"]
+        players:Dict[str, dict] = tournament_database_data["players"]
 
         all_used_team_nums:List[int] = []
 
@@ -164,6 +172,40 @@ class Tournament():
 
         return False
 
+    
+    async def open_form(self) -> bool:
+        """Opens the tournament signup form."""
+        tournament_data = await self.get_tournament_data()
+
+        # Set form to open.
+        tournament_data["form_open"] = True
+        
+        # Update database.
+        await self.database.edit(
+            TOURNAMENTS_COLLECTION, 
+            query={"_id":int(self.tournament_data.time_and_date.timestamp())},
+            data=tournament_data
+        )
+
+        return True
+
+
+    async def close_form(self) -> bool:
+        """Closes the tournament signup form."""
+        tournament_data = await self.get_tournament_data()
+
+        # Set form to closed.
+        tournament_data["form_open"] = False
+        
+        # Update database.
+        await self.database.edit(
+            TOURNAMENTS_COLLECTION, 
+            query={"_id":int(self.tournament_data.time_and_date.timestamp())},
+            data=tournament_data
+        )
+
+        return True
+
 
     async def remove(self):
         """Removes this tournament from the 'mcf_signup' database collection."""
@@ -192,6 +234,7 @@ class Tournament():
                 "_id" : int(self.tournament_data.time_and_date.timestamp()),
                 "created_at" : int(datetime.now().timestamp()),
                 "event_start_at" : int(self.tournament_data.time_and_date.timestamp()),
+                "form_open" : False,
                 "max_players" : self.tournament_data.max_players,
                 "created_by" : str(self.ctx.author.id),
 
