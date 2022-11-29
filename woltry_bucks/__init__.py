@@ -1,5 +1,6 @@
 import GoldyBot
 from  GoldyBot.utility.commands import send as send_msg, mention
+from GoldyBot.utility.user_input import Numbers
 
 class WoltryBucks(GoldyBot.Currency):
     """Don't question this, it had to be done."""
@@ -35,12 +36,13 @@ class WoltryBucksExtension(GoldyBot.Extension):
             pass
 
         @woltry_bucks.sub_command(required_roles=["woltry_bucks_seller"], also_run_parent_CMD=False, slash_options={
-            "member":GoldyBot.nextcord.SlashOption(description="Mention of member you would like to send woltry bucks to.", required=True)
+            "member":GoldyBot.nextcord.SlashOption(description="Mention of member you would like to send woltry bucks to.", required=True),
+            "amount": GoldyBot.nextcord.SlashOption(description="The amount of woltry bucks you would like to give to this member.", required=True)
         })
         async def send(self:WoltryBucksExtension, ctx, member:str, amount:str):
             target_member = GoldyBot.Member(ctx, mention_str=member)
 
-            result = await target_member.give_money(self.currency, str(amount))
+            result = await target_member.give_money(self.currency, Numbers.get_number(amount))
 
             if result:
                 embed = self.sent_money_embed.copy()
@@ -57,12 +59,13 @@ class WoltryBucksExtension(GoldyBot.Extension):
                 
 
         @woltry_bucks.sub_command(required_roles=["woltry_bucks_seller"], also_run_parent_CMD=False, slash_options={
-            "member":GoldyBot.nextcord.SlashOption(description="Mention of member you would like to take woltry bucks from.", required=True)
+            "member": GoldyBot.nextcord.SlashOption(description="Mention of member you would like to take woltry bucks from.", required=True),
+            "amount": GoldyBot.nextcord.SlashOption(description="The amount of woltry bucks you would like to take from this member.", required=True)
         })
         async def take(self:WoltryBucksExtension, ctx, member:str, amount:str):
             target_member = GoldyBot.Member(ctx, mention_str=member)
 
-            result = await target_member.take_money(self.currency, str(amount))
+            result = await target_member.take_money(self.currency, Numbers.get_number(amount))
 
             if result:
                 embed = self.took_money_embed.copy()
